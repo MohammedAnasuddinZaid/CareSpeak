@@ -13,7 +13,7 @@ export default function LicensePage() {
         <div className="card p-8 text-sm text-[#6e6e6e] leading-relaxed space-y-4 whitespace-pre-line font-mono">
           {`MIT License
 
-Copyright (c) 2025 CareSpeak
+Copyright (c) 2026 CareSpeak
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

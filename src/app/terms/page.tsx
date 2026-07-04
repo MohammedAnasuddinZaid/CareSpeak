@@ -11,7 +11,7 @@ export default function TermsPage() {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
         <h1 className="text-4xl font-bold text-[#1f1f1f] mb-8">Terms of Service</h1>
         <div className="card p-8 text-sm text-[#6e6e6e] leading-relaxed space-y-4">
-          <p><strong>Last updated:</strong> July 2025</p>
+          <p><strong>Last updated:</strong> July 2026</p>
 
           <h2 className="text-lg font-semibold text-[#1f1f1f] mt-6">Acceptance of Terms</h2>
           <p>
