@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { QrCode, Copy, Link, Check, Smartphone } from "lucide-react";
+import { QrCode, Copy, Check, Smartphone } from "lucide-react";
 import { getNurseDashboardUrl } from "@/lib/session";
 import QRCode from "qrcode";
 
@@ -22,7 +22,7 @@ export default function QRPairingDisplay({ sessionId, compact = false }: QRPairi
       QRCode.toDataURL(url, {
         width: compact ? 160 : 280,
         margin: 1,
-        color: { dark: "#ffffff", light: "#0f172a" },
+        color: { dark: "#1f1f1f", light: "#ffffff" },
       }).then(setQrDataUrl).catch(() => {});
     }
   }, [sessionId, compact]);
@@ -41,25 +41,25 @@ export default function QRPairingDisplay({ sessionId, compact = false }: QRPairi
   if (compact) {
     return (
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
+        initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-slate-800/50 rounded-2xl border border-white/10 p-4"
+        className="card p-4 mb-6"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <div className="shrink-0">
             {qrDataUrl ? (
               <img src={qrDataUrl} alt="Pairing QR" className="w-16 h-16 rounded-lg" />
             ) : (
-              <canvas ref={canvasRef} className="w-16 h-16 rounded-lg bg-slate-900" />
+              <canvas ref={canvasRef} className="w-16 h-16 rounded-lg bg-[#f5f3f0]" />
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-slate-400 mb-1">Session</p>
-            <p className="text-lg font-bold text-white tracking-widest font-mono">{sessionId}</p>
+            <p className="text-xs text-[#6e6e6e] mb-1">Session ID — share with nurse</p>
+            <p className="text-lg font-bold text-[#1f1f1f] tracking-widest font-mono">{sessionId}</p>
           </div>
           <button
             onClick={handleCopy}
-            className="p-2 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 transition-all shrink-0"
+            className="p-2.5 rounded-xl bg-[#c63a22]/10 hover:bg-[#c63a22]/20 text-[#c63a22] transition-all shrink-0"
           >
             {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
           </button>
@@ -72,45 +72,43 @@ export default function QRPairingDisplay({ sessionId, compact = false }: QRPairi
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-slate-800/50 rounded-2xl border border-white/10 p-6"
+      className="card p-8"
     >
       <div className="flex items-center gap-2 mb-4">
-        <QrCode className="w-5 h-5 text-indigo-400" />
-        <h3 className="font-semibold text-white">Pair Remote Nurse Console</h3>
+        <QrCode className="w-5 h-5 text-[#c63a22]" />
+        <h3 className="font-semibold text-[#1f1f1f]">Pair Remote Nurse Console</h3>
       </div>
-      <p className="text-sm text-slate-400 mb-4">
+      <p className="text-sm text-[#6e6e6e] mb-6">
         Scan this QR code with a device to open the nurse monitoring dashboard.
       </p>
-      <div className="flex flex-col items-center gap-4">
-        <div className="bg-slate-900 rounded-2xl p-4 border border-white/10">
+      <div className="flex flex-col items-center gap-6">
+        <div className="bg-white rounded-2xl p-4 border-2 border-[#ececec]">
           {qrDataUrl ? (
             <img src={qrDataUrl} alt="Pairing QR Code" className="w-44 h-44" />
           ) : (
-            <div className="w-44 h-44 bg-slate-800 rounded-xl animate-pulse flex items-center justify-center">
-              <QrCode className="w-12 h-12 text-slate-600" />
+            <div className="w-44 h-44 bg-[#f5f3f0] rounded-xl animate-pulse flex items-center justify-center">
+              <QrCode className="w-12 h-12 text-[#6e6e6e]" />
             </div>
           )}
         </div>
         <div className="text-center">
-          <p className="text-xs text-slate-500 mb-1">Session ID</p>
-          <p className="text-2xl font-bold text-white tracking-[0.3em] font-mono">{sessionId}</p>
+          <p className="text-xs text-[#6e6e6e] mb-1">Session ID</p>
+          <p className="text-2xl font-bold text-[#1f1f1f] tracking-[0.3em] font-mono">{sessionId}</p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handleCopy}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 text-sm font-medium transition-all"
-          >
-            {copied ? (
-              <><Check className="w-4 h-4" /> Copied!</>
-            ) : (
-              <><Link className="w-4 h-4" /> Copy Dashboard URL</>
-            )}
-          </button>
-        </div>
+        <button
+          onClick={handleCopy}
+          className="btn-primary flex items-center gap-2 px-5 py-2.5 text-sm"
+        >
+          {copied ? (
+            <><Check className="w-4 h-4" /> Copied!</>
+          ) : (
+            <><Copy className="w-4 h-4" /> Copy Dashboard URL</>
+          )}
+        </button>
       </div>
-      <div className="mt-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-2">
-        <Smartphone className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-        <p className="text-xs text-amber-300/80">
+      <div className="mt-6 p-3 rounded-xl bg-[#fffbeb] border border-[#fde68a] flex items-start gap-2">
+        <Smartphone className="w-4 h-4 text-[#e8993e] shrink-0 mt-0.5" />
+        <p className="text-xs text-[#92400e]">
           Open the nurse dashboard on another device and enter this Session ID to pair.
         </p>
       </div>

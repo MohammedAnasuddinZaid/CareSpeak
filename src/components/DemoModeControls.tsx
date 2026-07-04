@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Beaker, Eye, Hand, ThumbsUp, ThumbsDown, HelpCircle, Droplets, Ban } from "lucide-react";
+import { Beaker, Eye, Hand, ThumbsUp, ThumbsDown, HelpCircle, Droplets } from "lucide-react";
 
 interface DemoModeControlsProps {
   onSimulateGesture: (gesture: string) => void;
@@ -10,10 +10,10 @@ interface DemoModeControlsProps {
 }
 
 const GESTURE_BUTTONS = [
-  { gesture: "YES", icon: ThumbsUp, label: "Yes", color: "text-green-400 bg-green-500/20 hover:bg-green-500/30" },
-  { gesture: "NO", icon: ThumbsDown, label: "No", color: "text-red-400 bg-red-500/20 hover:bg-red-500/30" },
-  { gesture: "HELP", icon: HelpCircle, label: "Help", color: "text-amber-400 bg-amber-500/20 hover:bg-amber-500/30" },
-  { gesture: "WATER", icon: Droplets, label: "Water", color: "text-blue-400 bg-blue-500/20 hover:bg-blue-500/30" },
+  { gesture: "YES", icon: ThumbsUp, label: "Yes", color: "text-[#22a67e] bg-[#ecfdf5] hover:bg-[#d1fae5]" },
+  { gesture: "NO", icon: ThumbsDown, label: "No", color: "text-[#d94a4a] bg-[#fef2f2] hover:bg-[#fee2e2]" },
+  { gesture: "HELP", icon: HelpCircle, label: "Help", color: "text-[#e8993e] bg-[#fffbeb] hover:bg-[#fef3c7]" },
+  { gesture: "WATER", icon: Droplets, label: "Water", color: "text-[#3b82f6] bg-[#eff6ff] hover:bg-[#dbeafe]" },
 ];
 
 export default function DemoModeControls({ onSimulateGesture, gestureType }: DemoModeControlsProps) {
@@ -25,11 +25,11 @@ export default function DemoModeControls({ onSimulateGesture, gestureType }: Dem
         onClick={() => setActive(!active)}
         className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
           active
-            ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-            : "bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-700/50 border border-white/10"
+            ? "bg-[#c63a22]/10 text-[#c63a22] border border-[#c63a22]/20"
+            : "btn-secondary"
         }`}
       >
-        <Beaker className={`w-4 h-4 ${active ? "animate-pulse" : ""}`} />
+        <Beaker className={`w-4 h-4 ${active ? "animate-breathe" : ""}`} />
         {active ? "Demo Mode Active" : "Demo Mode"}
       </button>
       <AnimatePresence>
@@ -40,14 +40,14 @@ export default function DemoModeControls({ onSimulateGesture, gestureType }: Dem
             exit={{ opacity: 0, height: 0 }}
             className="mt-3 overflow-hidden"
           >
-            <div className="bg-slate-800/30 rounded-xl border border-white/10 p-3">
+            <div className="bg-white rounded-xl border border-[#ececec] p-3">
               <div className="flex items-center gap-2 mb-3">
                 {gestureType === "hand" ? (
-                  <Hand className="w-4 h-4 text-indigo-400" />
+                  <Hand className="w-4 h-4 text-[#c63a22]" />
                 ) : (
-                  <Eye className="w-4 h-4 text-emerald-400" />
+                  <Eye className="w-4 h-4 text-[#22a67e]" />
                 )}
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-[#6e6e6e]">
                   Simulate {gestureType === "hand" ? "hand" : "eye"} gestures
                 </span>
               </div>
@@ -66,7 +66,7 @@ export default function DemoModeControls({ onSimulateGesture, gestureType }: Dem
                   );
                 })}
               </div>
-              <p className="text-[10px] text-slate-600 mt-2 text-center">
+              <p className="text-[10px] text-[#9ca3af] mt-2 text-center">
                 Gestures logged, synced, and displayed on nurse dashboard in real time
               </p>
             </div>
