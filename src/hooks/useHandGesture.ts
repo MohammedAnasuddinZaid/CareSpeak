@@ -193,11 +193,9 @@ export function useHandGesture(onBroadcastAlert?: (gesture: string, description:
         const entry = HAND_GESTURE_MAP[smoothed.gesture];
         if (entry) {
           voiceAlert.speak(smoothed.gesture, "hand");
-          if (smoothed.gesture !== lastLoggedGesture.current) {
-            addGestureLog(smoothed.gesture, entry.description, smoothed.confidence, "hand", voiceAlert.getLanguage());
-            lastLoggedGesture.current = smoothed.gesture;
-            onBroadcastAlert?.(smoothed.gesture, entry.description, smoothed.confidence);
-          }
+          addGestureLog(smoothed.gesture, entry.description, smoothed.confidence, "hand", voiceAlert.getLanguage());
+          lastLoggedGesture.current = smoothed.gesture;
+          onBroadcastAlert?.(smoothed.gesture, entry.description, smoothed.confidence);
         }
       }
 

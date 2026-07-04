@@ -41,105 +41,35 @@ function getDescription(gestureName: string, lang: SupportedLanguage): string {
   return fallback[gestureName] ?? gestureName;
 }
 
-let voiceCache: SpeechSynthesisVoice[] | null = null;
+let voicesReady = false;
 
-function getCachedVoices(): SpeechSynthesisVoice[] {
-  if (voiceCache && voiceCache.length > 0) return voiceCache;
+function ensureVoices(): void {
+  if (voicesReady || typeof window === "undefined" || !window.speechSynthesis) return;
   try {
     const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) voiceCache = voices;
-    return voices;
-  } catch { return []; }
-}
-
-function findVoiceForLang(lang: SupportedLanguage): SpeechSynthesisVoice | null {
-  try {
-    const voices = getCachedVoices();
-    if (voices.length === 0) return null;
-
-    const langPrefix = lang.split("-")[0].toLowerCase();
-
-    const exact = voices.find((v) => v.lang.toLowerCase() === lang.toLowerCase());
-    if (exact) return exact;
-
-    const prefixMatch = voices.find((v) => v.lang.toLowerCase().startsWith(langPrefix));
-    if (prefixMatch) return prefixMatch;
-
-    const fallbackMap: Record<string, string> = {
-      hi: "hi", es: "es", fr: "fr", de: "de",
-      zh: "zh", ar: "ar", pt: "pt", en: "en",
+    if (voices.length > 0) { voicesReady = true; return; }
+    window.speechSynthesis.onvoiceschanged = () => {
+      const v = window.speechSynthesis.getVoices();
+      if (v.length > 0) voicesReady = true;
     };
-    const fallbackPrefix = fallbackMap[langPrefix];
-    if (fallbackPrefix) {
-      const fb = voices.find((v) => v.lang.toLowerCase().startsWith(fallbackPrefix));
-      if (fb) return fb;
-    }
-
-    const anyLocal = voices.find((v) => v.localService);
-    if (anyLocal) return anyLocal;
-
-    return voices[0] ?? null;
-  } catch { return null; }
+  } catch {}
 }
 
-let voicesLoaded = false;
-let ensurePromise: Promise<void> | null = null;
+function doSpeak(text: string, lang: string): void {
+  try {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    if (!text || text.trim().length === 0) return;
 
-function ensureVoices(): Promise<void> {
-  if (ensurePromise) return ensurePromise;
-  ensurePromise = new Promise((resolve) => {
-    if (typeof window === "undefined" || !window.speechSynthesis) { resolve(); return; }
-    try {
-      const existing = window.speechSynthesis.getVoices();
-      if (existing.length > 0) {
-        voiceCache = existing;
-        voicesLoaded = true;
-        resolve();
-        return;
-      }
-      window.speechSynthesis.onvoiceschanged = () => {
-        try {
-          const v = window.speechSynthesis.getVoices();
-          if (v.length > 0) { voiceCache = v; voicesLoaded = true; }
-        } catch {}
-        resolve();
-      };
-    } catch { resolve(); }
-    setTimeout(resolve, 3000);
-  });
-  return ensurePromise;
-}
+    window.speechSynthesis.cancel();
 
-function doSpeak(text: string, lang: SupportedLanguage): Promise<void> {
-  return new Promise((resolve) => {
-    try {
-      if (typeof window === "undefined" || !window.speechSynthesis) { resolve(); return; }
-      if (!text || text.trim().length === 0) { resolve(); return; }
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.85;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+    utterance.lang = lang;
 
-      window.speechSynthesis.cancel();
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.85;
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
-      utterance.lang = lang;
-
-      const voice = findVoiceForLang(lang);
-      if (voice) utterance.voice = voice;
-
-      let done = false;
-      const timeout = setTimeout(() => { if (!done) { done = true; resolve(); } }, 5000);
-
-      utterance.onend = () => { if (!done) { done = true; clearTimeout(timeout); resolve(); } };
-      utterance.onerror = () => { if (!done) { done = true; clearTimeout(timeout); resolve(); } };
-
-      setTimeout(() => {
-        try {
-          window.speechSynthesis.speak(utterance);
-        } catch { if (!done) { done = true; resolve(); } }
-      }, 80);
-    } catch { resolve(); }
-  });
+    window.speechSynthesis.speak(utterance);
+  } catch {}
 }
 
 export class VoiceAlert {
@@ -152,16 +82,11 @@ export class VoiceAlert {
   private language: SupportedLanguage;
   private soundEnabled = true;
   private speechQueue: Promise<void> = Promise.resolve();
-  private ready: Promise<void>;
 
   constructor(cooldownMs = 10000) {
     this.cooldownMs = cooldownMs;
     this.language = getSavedLanguage();
-    this.ready = ensureVoices();
-  }
-
-  async waitReady(): Promise<void> {
-    await this.ready;
+    ensureVoices();
   }
 
   setEnabled(v: boolean) { this.enabled = v; }
@@ -171,8 +96,9 @@ export class VoiceAlert {
   setLanguage(lang: SupportedLanguage) {
     this.language = lang;
     saveLanguage(lang);
+    ensureVoices();
     const greeting = GREETINGS[lang] || GREETINGS["en-US"];
-    this.speakDirect(greeting, lang);
+    doSpeak(greeting, lang);
   }
 
   speak(gestureName: string, type: GestureType = "hand"): void {
@@ -194,7 +120,7 @@ export class VoiceAlert {
   speakDirect(text: string, lang?: SupportedLanguage): void {
     if (!this.enabled) return;
     const l = lang ?? this.language;
-    this.speechQueue = this.speechQueue.then(() => doSpeak(text, l));
+    doSpeak(text, l);
   }
 
   resetGesture(gestureName?: string) {
@@ -203,7 +129,7 @@ export class VoiceAlert {
 
   replay(text: string): void {
     if (!this.enabled) return;
-    this.speechQueue = this.speechQueue.then(() => doSpeak(text, this.language));
+    doSpeak(text, this.language);
   }
 
   stop(): void {

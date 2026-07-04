@@ -1,6 +1,6 @@
 import { GestureLogEntry, SyncMessage, PatientMetrics, AlertAction } from "@/types";
 
-const POLL_INTERVAL = 2000;
+const POLL_INTERVAL = 150;
 const BROADCAST_CHANNEL = "carespeak_bystander";
 
 type AlertCallback = (entry: GestureLogEntry) => void;

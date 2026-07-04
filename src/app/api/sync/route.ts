@@ -77,8 +77,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         escalated: false,
         resolved: false,
       });
-      if (state.entries.length > 500) {
-        state.entries = state.entries.slice(-500);
+      if (state.entries.length > 10000) {
+        state.entries = state.entries.slice(-10000);
       }
       return NextResponse.json({ ok: true, index: state.entries.length - 1 });
     }

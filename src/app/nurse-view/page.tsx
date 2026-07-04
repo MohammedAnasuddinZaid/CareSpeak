@@ -53,7 +53,7 @@ export default function NurseViewPage() {
       onAlert: (entry) => {
         setLog((prev) => {
           if (prev.some((e) => e.id === entry.id)) return prev;
-          return [entry, ...prev].slice(0, 200);
+          return [entry, ...prev];
         });
         setLatest(entry);
       },
@@ -68,7 +68,7 @@ export default function NurseViewPage() {
       (entry) => {
         setLog((prev) => {
           if (prev.some((e) => e.id === entry.id)) return prev;
-          return [entry, ...prev].slice(0, 200);
+          return [entry, ...prev];
         });
         setLatest(entry);
         sync.sendAlert(entry);
@@ -100,7 +100,7 @@ export default function NurseViewPage() {
       onAlert: (entry) => {
         setLog((prev) => {
           if (prev.some((e) => e.id === entry.id)) return prev;
-          return [entry, ...prev].slice(0, 200);
+          return [entry, ...prev];
         });
         setLatest(entry);
       },
@@ -265,7 +265,7 @@ export default function NurseViewPage() {
                     const Icon = typeCfg.icon;
                     const isCritical = entry.gesture === "HELP" || entry.gesture === "EMERGENCY" || entry.isEscalated;
                     return (
-                      <motion.div key={entry.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: Math.min(i * 0.02, 0.5) }}
+                      <motion.div key={entry.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0 }}
                         className={`flex items-center gap-4 px-6 py-4 transition-all duration-200 ${
                           isCritical && !entry.acknowledged ? "bg-[#fef2f2] border-l-2 border-l-[#d94a4a]" :
                           !entry.acknowledged ? "bg-[#fdf4f0] border-l-2 border-l-[#c63a22]" : "hover:bg-[#f5f3f0]"

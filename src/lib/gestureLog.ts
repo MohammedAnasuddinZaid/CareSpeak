@@ -1,7 +1,7 @@
 import { GestureLogEntry, GestureType } from "@/types";
 
 const STORAGE_KEY = "carespeak_gesture_log";
-const MAX_ENTRIES = 200;
+const MAX_ENTRIES = 10000;
 const BC_CHANNEL_NAME = "carespeak_bystander";
 
 let broadcastChannel: BroadcastChannel | null = null;
