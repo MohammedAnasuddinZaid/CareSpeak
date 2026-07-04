@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, Clock, Eye, Hand, CheckCircle, Filter, Activity, Monitor, AlertTriangle, Wifi, Smartphone, Shield, ArrowUpCircle } from "lucide-react";
+import { Bell, Clock, Eye, Hand, CheckCircle, Filter, Activity, Monitor, AlertTriangle, Wifi, Smartphone, Shield, ArrowUpCircle, RefreshCw } from "lucide-react";
 import { loadGestureLog, subscribeToGestureUpdates, acknowledgeEntry as acknowledgeLocal } from "@/lib/gestureLog";
 import { GestureLogEntry, ESCALATION_RULES, PatientMetrics } from "@/types";
 import { createNetworkSync, NetworkSync } from "@/lib/networkSync";
@@ -31,28 +31,21 @@ export default function NurseViewPage() {
   const [sessionInput, setSessionInput] = useState("");
   const [paired, setPaired] = useState(false);
   const [remoteMetrics, setRemoteMetrics] = useState<Record<string, PatientMetrics>>({});
-  const [syncStatus, setSyncStatus] = useState<"disconnected" | "connected" | "polling">("disconnected");
+  const [connectionStatus, setConnectionStatus] = useState<"connected" | "reconnecting" | "disconnected">("disconnected");
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [refreshing, setRefreshing] = useState(false);
   const syncRef = useRef<NetworkSync | null>(null);
+  const autoPaidRef = useRef(false);
 
   const entriesForActions = useMemo(() =>
     log.filter((e) => e.gesture === "HELP" || e.gesture === "EMERGENCY" || (e.patientMetrics?.alertnessScore != null && e.patientMetrics.alertnessScore < 25) || log.length < 10),
   [log]);
 
-  useEffect(() => {
-    const entries = loadGestureLog();
-    setLog(entries);
-    setLatest(entries[0] ?? null);
-    if (entries.length > 0) setLastUpdated(entries[0].timestamp);
-
-    const session = getSession();
-    if (session?.sessionId) {
-      setPaired(true);
-    }
-
+  const createSync = useCallback((sessionId?: string) => {
+    if (syncRef.current) syncRef.current.destroy();
     const sync = createNetworkSync({
-      sessionId: session?.sessionId,
+      sessionId,
       onAlert: (entry) => {
         setLog((prev) => {
           if (prev.some((e) => e.id === entry.id)) return prev;
@@ -65,9 +58,37 @@ export default function NurseViewPage() {
         setRemoteMetrics((prev) => ({ ...prev, ...metrics }));
         setLastUpdated(Date.now());
       },
+      onStatusChange: (status) => setConnectionStatus(status),
     });
     syncRef.current = sync;
-    setSyncStatus("polling");
+    return sync;
+  }, []);
+
+  useEffect(() => {
+    const entries = loadGestureLog();
+    setLog(entries);
+    setLatest(entries[0] ?? null);
+    if (entries.length > 0) setLastUpdated(entries[0].timestamp);
+
+    let sessionId: string | undefined;
+    const existing = getSession();
+    if (existing?.sessionId) {
+      sessionId = existing.sessionId;
+      setPaired(true);
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const urlSession = params.get("session");
+    if (urlSession && urlSession.length >= 3 && !autoPaidRef.current) {
+      autoPaidRef.current = true;
+      sessionId = urlSession.toUpperCase();
+      setSessionId(sessionId);
+      setSessionInput(sessionId);
+      setPaired(true);
+    }
+
+    const sync = createSync(sessionId);
+    syncRef.current = sync;
 
     const unsub = subscribeToGestureUpdates(
       (entry) => {
@@ -76,7 +97,6 @@ export default function NurseViewPage() {
           return [entry, ...prev];
         });
         setLatest(entry);
-        sync.sendAlert(entry);
       },
       undefined,
       (entryId) => {
@@ -88,35 +108,21 @@ export default function NurseViewPage() {
       unsub();
       sync.destroy();
     };
-  }, []);
+  }, [createSync]);
 
   const handlePairSession = useCallback(() => {
     const id = sessionInput.trim().toUpperCase();
     if (id.length < 3) return;
     const session = setSessionId(id);
     setPaired(true);
-    setSyncStatus("connected");
+    createSync(session.sessionId);
+  }, [sessionInput, createSync]);
 
-    if (syncRef.current) {
-      syncRef.current.destroy();
-    }
-    const sync = createNetworkSync({
-      sessionId: session.sessionId,
-      onAlert: (entry) => {
-        setLog((prev) => {
-          if (prev.some((e) => e.id === entry.id)) return prev;
-          return [entry, ...prev];
-        });
-        setLatest(entry);
-        setLastUpdated(Date.now());
-      },
-      onMetrics: (metrics) => {
-        setRemoteMetrics((prev) => ({ ...prev, ...metrics }));
-        setLastUpdated(Date.now());
-      },
-    });
-    syncRef.current = sync;
-  }, [sessionInput]);
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    syncRef.current?.refresh();
+    setTimeout(() => setRefreshing(false), 600);
+  }, []);
 
   const handleAcknowledge = useCallback((id: string) => {
     acknowledgeLocal(id);
@@ -157,10 +163,9 @@ export default function NurseViewPage() {
   }, [log, filter]);
 
   useEffect(() => {
-    if (!paired) return;
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
-  }, [paired]);
+  }, []);
 
   const formatTime = (ts: number) => {
     const d = new Date(ts);
@@ -219,12 +224,33 @@ export default function NurseViewPage() {
         )}
 
         {paired && (
-          <div className="mb-6 flex items-center gap-3 px-4 py-2 rounded-xl bg-[#ecfdf5] border border-[#a7f3d0] text-[#22a67e] text-xs font-medium w-fit">
-            <span className="relative flex w-2.5 h-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#22a67e] opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#22a67e]" />
-            </span>
-            Live{lastUpdated ? ` · ${Math.max(0, Math.floor((now - lastUpdated) / 1000))}s ago` : ""}
+          <div className="mb-6 flex items-center gap-3 flex-wrap">
+            <div className={`flex items-center gap-3 px-4 py-2 rounded-xl border text-xs font-medium w-fit transition-colors duration-300 ${
+              connectionStatus === "connected"
+                ? "bg-[#ecfdf5] border-[#a7f3d0] text-[#22a67e]"
+                : connectionStatus === "reconnecting"
+                ? "bg-[#fffbeb] border-[#fde68a] text-[#e8993e]"
+                : "bg-[#fef2f2] border-[#fecaca] text-[#d94a4a]"
+            }`}>
+              <span className="relative flex w-2.5 h-2.5">
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                  connectionStatus === "connected" ? "bg-[#22a67e]" : connectionStatus === "reconnecting" ? "bg-[#e8993e]" : "bg-[#d94a4a]"
+                }`} />
+                <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                  connectionStatus === "connected" ? "bg-[#22a67e]" : connectionStatus === "reconnecting" ? "bg-[#e8993e]" : "bg-[#d94a4a]"
+                }`} />
+              </span>
+              {connectionStatus === "connected" ? "Live" : connectionStatus === "reconnecting" ? "Reconnecting..." : "Disconnected"}
+              {lastUpdated && connectionStatus === "connected" ? ` · ${Math.max(0, Math.floor((now - lastUpdated) / 1000))}s ago` : ""}
+            </div>
+            <button onClick={handleRefresh} disabled={refreshing}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#ececec] text-[#6e6e6e] hover:bg-[#f5f3f0] text-xs font-medium transition-all duration-200 disabled:opacity-50"
+            >
+              <span className={`inline-block ${refreshing ? "animate-spin" : ""}`}>
+                <RefreshCw className="w-3.5 h-3.5" />
+              </span>
+              {refreshing ? "Refreshing..." : "Refresh"}
+            </button>
           </div>
         )}
 

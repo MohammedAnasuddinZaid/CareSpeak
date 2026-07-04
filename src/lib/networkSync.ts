@@ -1,11 +1,14 @@
 import { GestureLogEntry, SyncMessage, PatientMetrics, AlertAction } from "@/types";
 
 const POLL_INTERVAL = 100;
+const MAX_RETRY_INTERVAL = 5000;
+const INITIAL_RETRY_BACKOFF = 500;
 const BROADCAST_CHANNEL = "carespeak_bystander";
 
 type AlertCallback = (entry: GestureLogEntry) => void;
 type ActionCallback = (action: AlertAction, entryId: string) => void;
 type MetricsCallback = (metrics: Record<string, PatientMetrics>) => void;
+type StatusChangeCallback = (status: "connected" | "reconnecting" | "disconnected") => void;
 
 interface NetworkSyncConfig {
   sessionId?: string;
@@ -13,15 +16,20 @@ interface NetworkSyncConfig {
   onAlert?: AlertCallback;
   onAction?: ActionCallback;
   onMetrics?: MetricsCallback;
+  onStatusChange?: StatusChangeCallback;
 }
 
 export class NetworkSync {
   private config: NetworkSyncConfig;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private lastPollTime: number = 0;
+  private retryBackoff: number = INITIAL_RETRY_BACKOFF;
+  private consecutiveFailures: number = 0;
   private broadcastChannel: BroadcastChannel | null = null;
   private entries: GestureLogEntry[] = [];
   private offlineQueue: GestureLogEntry[] = [];
+  private status: "connected" | "reconnecting" | "disconnected" = "disconnected";
 
   constructor(config: NetworkSyncConfig) {
     this.config = config;
@@ -141,8 +149,23 @@ export class NetworkSync {
     } catch {}
   }
 
+  private setStatus(status: "connected" | "reconnecting" | "disconnected"): void {
+    if (this.status === status) return;
+    this.status = status;
+    this.config.onStatusChange?.(status);
+  }
+
+  refresh(): void {
+    this.lastPollTime = 0;
+    this.consecutiveFailures = 0;
+    this.retryBackoff = INITIAL_RETRY_BACKOFF;
+    this.poll();
+  }
+
   startPolling(): void {
     if (this.pollTimer) return;
+    this.setStatus("connected");
+    this.poll();
     this.pollTimer = setInterval(() => this.poll(), POLL_INTERVAL);
   }
 
@@ -151,6 +174,20 @@ export class NetworkSync {
       clearInterval(this.pollTimer);
       this.pollTimer = null;
     }
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
+    }
+  }
+
+  private scheduleRetry(): void {
+    this.stopPolling();
+    this.setStatus("reconnecting");
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null;
+      this.poll();
+      this.pollTimer = setInterval(() => this.poll(), POLL_INTERVAL);
+    }, this.retryBackoff);
   }
 
   private async poll(): Promise<void> {
@@ -158,23 +195,41 @@ export class NetworkSync {
       const since = this.lastPollTime;
       const url = `${this.getServerUrl()}?since=${since}${this.config.sessionId ? `&session=${this.config.sessionId}` : ""}`;
       const res = await fetch(url);
-      if (!res.ok) return;
+      if (!res.ok) throw new Error(`Poll failed: ${res.status}`);
       const data = await res.json();
-      this.lastPollTime = data.serverTime || Date.now();
+      const serverTime = data.serverTime || Date.now();
 
-      if (data.entries) {
-        for (const entry of data.entries as GestureLogEntry[]) {
+      this.consecutiveFailures = 0;
+      this.retryBackoff = INITIAL_RETRY_BACKOFF;
+      this.setStatus("connected");
+
+      if (data.entries && data.entries.length > 0) {
+        const entries = data.entries as GestureLogEntry[];
+        const maxEntryTs = Math.max(...entries.map((e: GestureLogEntry) => e.timestamp), 0);
+        this.lastPollTime = Math.max(serverTime, maxEntryTs, this.lastPollTime);
+
+        for (const entry of entries) {
           const exists = this.entries.some((e) => e.id === entry.id);
           if (!exists) {
             this.entries.push(entry);
             this.config.onAlert?.(entry);
           }
         }
+      } else {
+        this.lastPollTime = Math.max(serverTime, this.lastPollTime);
       }
+
       if (data.patientMetrics) {
         this.config.onMetrics?.(data.patientMetrics);
       }
-    } catch {}
+    } catch {
+      this.consecutiveFailures++;
+      this.retryBackoff = Math.min(this.retryBackoff * 2, MAX_RETRY_INTERVAL);
+      if (this.consecutiveFailures > 2) {
+        this.setStatus("disconnected");
+      }
+      this.scheduleRetry();
+    }
   }
 
   async flushOfflineQueue(): Promise<void> {
