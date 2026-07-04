@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "@/app/globals.css";
 import Navbar from "@/components/Navbar";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 
 export const metadata: Metadata = {
   title: "CareSpeak — Giving Every Patient a Voice",
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen antialiased">
         <ServiceWorkerRegister />
+        <PwaInstallPrompt />
         <Navbar />
         <main className="min-h-screen">{children}</main>
         <footer className="border-t border-[#ececec] bg-white py-16">
