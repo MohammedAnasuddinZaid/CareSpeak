@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, Clock, Eye, Hand, CheckCircle, Filter, Activity, Monitor, AlertTriangle, Wifi, Smartphone, Shield, ArrowUpCircle, RefreshCw } from "lucide-react";
+import { Bell, Clock, Eye, Hand, CheckCircle, Filter, Activity, Monitor, AlertTriangle, Wifi, Smartphone, Shield, ArrowUpCircle } from "lucide-react";
 import { loadGestureLog, subscribeToGestureUpdates, acknowledgeEntry as acknowledgeLocal } from "@/lib/gestureLog";
 import { GestureLogEntry, ESCALATION_RULES, PatientMetrics } from "@/types";
 import { createNetworkSync, NetworkSync } from "@/lib/networkSync";
@@ -34,7 +34,6 @@ export default function NurseViewPage() {
   const [connectionStatus, setConnectionStatus] = useState<"connected" | "reconnecting" | "disconnected">("disconnected");
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
-  const [refreshing, setRefreshing] = useState(false);
   const syncRef = useRef<NetworkSync | null>(null);
   const autoPaidRef = useRef(false);
 
@@ -117,12 +116,6 @@ export default function NurseViewPage() {
     setPaired(true);
     createSync(session.sessionId);
   }, [sessionInput, createSync]);
-
-  const handleRefresh = useCallback(() => {
-    setRefreshing(true);
-    syncRef.current?.refresh();
-    setTimeout(() => setRefreshing(false), 600);
-  }, []);
 
   const handleAcknowledge = useCallback((id: string) => {
     acknowledgeLocal(id);
@@ -224,33 +217,23 @@ export default function NurseViewPage() {
         )}
 
         {paired && (
-          <div className="mb-6 flex items-center gap-3 flex-wrap">
-            <div className={`flex items-center gap-3 px-4 py-2 rounded-xl border text-xs font-medium w-fit transition-colors duration-300 ${
-              connectionStatus === "connected"
-                ? "bg-[#ecfdf5] border-[#a7f3d0] text-[#22a67e]"
-                : connectionStatus === "reconnecting"
-                ? "bg-[#fffbeb] border-[#fde68a] text-[#e8993e]"
-                : "bg-[#fef2f2] border-[#fecaca] text-[#d94a4a]"
-            }`}>
-              <span className="relative flex w-2.5 h-2.5">
-                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                  connectionStatus === "connected" ? "bg-[#22a67e]" : connectionStatus === "reconnecting" ? "bg-[#e8993e]" : "bg-[#d94a4a]"
-                }`} />
-                <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
-                  connectionStatus === "connected" ? "bg-[#22a67e]" : connectionStatus === "reconnecting" ? "bg-[#e8993e]" : "bg-[#d94a4a]"
-                }`} />
-              </span>
-              {connectionStatus === "connected" ? "Live" : connectionStatus === "reconnecting" ? "Reconnecting..." : "Disconnected"}
-              {lastUpdated && connectionStatus === "connected" ? ` · ${Math.max(0, Math.floor((now - lastUpdated) / 1000))}s ago` : ""}
-            </div>
-            <button onClick={handleRefresh} disabled={refreshing}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#ececec] text-[#6e6e6e] hover:bg-[#f5f3f0] text-xs font-medium transition-all duration-200 disabled:opacity-50"
-            >
-              <span className={`inline-block ${refreshing ? "animate-spin" : ""}`}>
-                <RefreshCw className="w-3.5 h-3.5" />
-              </span>
-              {refreshing ? "Refreshing..." : "Refresh"}
-            </button>
+          <div className={`mb-6 flex items-center gap-3 px-4 py-2 rounded-xl border text-xs font-medium w-fit transition-colors duration-300 ${
+            connectionStatus === "connected"
+              ? "bg-[#ecfdf5] border-[#a7f3d0] text-[#22a67e]"
+              : connectionStatus === "reconnecting"
+              ? "bg-[#fffbeb] border-[#fde68a] text-[#e8993e]"
+              : "bg-[#fef2f2] border-[#fecaca] text-[#d94a4a]"
+          }`}>
+            <span className="relative flex w-2.5 h-2.5">
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                connectionStatus === "connected" ? "bg-[#22a67e]" : connectionStatus === "reconnecting" ? "bg-[#e8993e]" : "bg-[#d94a4a]"
+              }`} />
+              <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                connectionStatus === "connected" ? "bg-[#22a67e]" : connectionStatus === "reconnecting" ? "bg-[#e8993e]" : "bg-[#d94a4a]"
+              }`} />
+            </span>
+            {connectionStatus === "connected" ? "Live" : connectionStatus === "reconnecting" ? "Reconnecting..." : "Disconnected"}
+            {lastUpdated && connectionStatus === "connected" ? ` · ${Math.max(0, Math.floor((now - lastUpdated) / 1000))}s ago` : ""}
           </div>
         )}
 

@@ -197,7 +197,6 @@ export class NetworkSync {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Poll failed: ${res.status}`);
       const data = await res.json();
-      const serverTime = data.serverTime || Date.now();
 
       this.consecutiveFailures = 0;
       this.retryBackoff = INITIAL_RETRY_BACKOFF;
@@ -205,18 +204,16 @@ export class NetworkSync {
 
       if (data.entries && data.entries.length > 0) {
         const entries = data.entries as GestureLogEntry[];
-        const maxEntryTs = Math.max(...entries.map((e: GestureLogEntry) => e.timestamp), 0);
-        this.lastPollTime = Math.max(serverTime, maxEntryTs, this.lastPollTime);
-
+        let newMaxTs = this.lastPollTime;
         for (const entry of entries) {
+          if (entry.timestamp > newMaxTs) newMaxTs = entry.timestamp;
           const exists = this.entries.some((e) => e.id === entry.id);
           if (!exists) {
             this.entries.push(entry);
             this.config.onAlert?.(entry);
           }
         }
-      } else {
-        this.lastPollTime = Math.max(serverTime, this.lastPollTime);
+        this.lastPollTime = newMaxTs;
       }
 
       if (data.patientMetrics) {
