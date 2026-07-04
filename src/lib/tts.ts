@@ -4,14 +4,14 @@ import { playAlertSound } from "./alertSounds";
 const LANG_KEY = "carespeak_language";
 
 const GREETINGS: Record<SupportedLanguage, string> = {
-  "en-US": "Hello, I am using CareSpeak AI to communicate.",
-  "hi-IN": "नमस्ते, मैं केयरस्पीक एआई का उपयोग करके बात कर रहा हूँ।",
-  "es-ES": "Hola, estoy usando CareSpeak AI para comunicarme.",
-  "fr-FR": "Bonjour, j'utilise CareSpeak AI pour communiquer.",
-  "de-DE": "Hallo, ich benutze CareSpeak AI zur Kommunikation.",
-  "zh-CN": "你好，我正在使用CareSpeak AI进行交流。",
-  "ar-SA": "مرحباً، أنا أستخدم كيرسبيك أي آي للتواصل.",
-  "pt-BR": "Olá, estou usando o CareSpeak AI para me comunicar.",
+  "en-US": "Hello, this is CareSpeak. How can I help you?",
+  "hi-IN": "नमस्ते, यह केयरस्पीक है। मैं आपकी कैसे मदद कर सकता हूँ?",
+  "es-ES": "Hola, soy CareSpeak. ¿Cómo puedo ayudarte?",
+  "fr-FR": "Bonjour, ici CareSpeak. Comment puis-je vous aider?",
+  "de-DE": "Hallo, hier ist CareSpeak. Wie kann ich Ihnen helfen?",
+  "zh-CN": "你好，这里是CareSpeak。我能帮你什么？",
+  "ar-SA": "مرحباً، هذا كيرسبيك. كيف يمكنني مساعدتك؟",
+  "pt-BR": "Olá, aqui é o CareSpeak. Como posso ajudar?",
 };
 
 function getSavedLanguage(): SupportedLanguage {
@@ -60,7 +60,11 @@ function doSpeak(text: string, lang: string): void {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
     if (!text || text.trim().length === 0) return;
 
-    window.speechSynthesis.cancel();
+    // Only cancel if something is actively speaking to avoid Chrome's
+    // cancel+speak-in-same-callstack bug that silently drops speech.
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+    }
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.85;

@@ -4,16 +4,16 @@ import Navbar from "@/components/Navbar";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 export const metadata: Metadata = {
-  title: "CareSpeak AI — Giving Every Patient a Voice",
+  title: "CareSpeak — Giving Every Patient a Voice",
   description:
-    "AI-powered communication for patients who cannot speak or move easily. Use hand gestures or eye movements to express needs — instantly converted to text and speech.",
+    "Assistive communication for patients who cannot speak or move easily. Use hand gestures or eye movements to express needs — instantly converted to text and speech.",
   other: {
     "theme-color": "#c63a22",
     "apple-mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "default",
-    "apple-mobile-web-app-title": "CareSpeak AI",
+    "apple-mobile-web-app-title": "CareSpeak",
     "mobile-web-app-capable": "yes",
-    "application-name": "CareSpeak AI",
+    "application-name": "CareSpeak",
   },
 };
 
@@ -38,17 +38,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
               <div className="md:col-span-2">
                 <div className="flex items-center gap-2.5 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-[#c63a22] flex items-center justify-center">
-                    <span className="text-white font-extrabold text-sm tracking-tight">CS</span>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden">
+                    <img src="/logo.png" alt="CareSpeak" className="w-full h-full object-cover" />
                   </div>
                   <div>
                     <span className="font-bold text-lg text-[#1f1f1f]">CareSpeak</span>
-                    <span className="text-[#c63a22] font-bold text-lg"> AI</span>
                   </div>
                 </div>
                 <p className="text-[#6e6e6e] text-sm leading-relaxed max-w-md">
                   Turning any laptop into an assistive communication device. 
-                  On-device AI translates hand gestures and eye movements into speech — 
+                  On-device processing translates hand gestures and eye movements into speech — 
                   no servers, no setup, no expensive hardware.
                 </p>
               </div>
@@ -83,7 +82,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
             <div className="mt-12 pt-8 border-t border-[#ececec] flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="text-sm text-[#6e6e6e]">
-                © {new Date().getFullYear()} CareSpeak AI. Giving every patient a voice.
+                © {new Date().getFullYear()} CareSpeak. Giving every patient a voice.
               </div>
               <div className="flex items-center gap-4 text-xs text-[#6e6e6e]">
                 <span>100% on-device · no data leaves your browser</span>

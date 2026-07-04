@@ -69,7 +69,7 @@ export default function EyeModePage() {
                 Eye Gesture Mode
               </div>
               <h1 className="text-3xl sm:text-4xl font-bold text-[#1f1f1f] tracking-tight">
-                AI Eye Tracking Dashboard
+                Eye Tracking Dashboard
               </h1>
               <p className="mt-2 text-[#6e6e6e]">
                 Use your eyes and face — look left, right, open your mouth, or blink twice. Close eyes for 5s to pause.

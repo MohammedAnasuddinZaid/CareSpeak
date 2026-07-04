@@ -244,9 +244,11 @@ export function useEyeGesture(onBroadcastAlert?: (gesture: string, description: 
         const entry = EYE_GESTURE_MAP[smoothed.gesture];
         if (entry) {
           voiceAlert.speak(smoothed.gesture, "eye");
-          addGestureLog(smoothed.gesture, entry.description, smoothed.confidence, "eye", voiceAlert.getLanguage());
-          lastLoggedGesture.current = smoothed.gesture;
-          onBroadcastAlert?.(smoothed.gesture, entry.description, smoothed.confidence);
+          if (smoothed.gesture !== lastLoggedGesture.current) {
+            addGestureLog(smoothed.gesture, entry.description, smoothed.confidence, "eye", voiceAlert.getLanguage());
+            lastLoggedGesture.current = smoothed.gesture;
+            onBroadcastAlert?.(smoothed.gesture, entry.description, smoothed.confidence);
+          }
         }
       }
 

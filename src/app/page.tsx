@@ -15,10 +15,10 @@ const stagger = {
 };
 
 const FEATURES = [
-  { icon: Hand, title: "Hand Gesture Recognition", desc: "Five distinct gestures — thumbs up, thumbs down, peace sign, open palm, and both hands — detected via on-device AI. Works in any lighting.", color: "#c63a22" },
+  { icon: Hand, title: "Hand Gesture Recognition", desc: "Five distinct gestures — thumbs up, thumbs down, peace sign, open palm, and both hands — detected via on-device computer vision. Works in any lighting.", color: "#c63a22" },
   { icon: Eye, title: "Eye Movement Tracking", desc: "Iris tracking and blink detection let patients communicate by gaze direction, double-blinks, and mouth gestures — no hand movement required.", color: "#22a67e" },
   { icon: Volume2, title: "Instant Voice Alerts", desc: "Every gesture triggers a spoken alert in the patient's chosen language. Nurses hear the need without watching the screen.", color: "#e8993e" },
-  { icon: Shield, title: "100% Private & Secure", desc: "All AI runs in-browser via WebAssembly. No video, no data, no images ever leave the device. No servers, no accounts, no tracking.", color: "#3b82f6" },
+  { icon: Shield, title: "100% Private & Secure", desc: "All processing runs in-browser via WebAssembly. No video, no data, no images ever leave the device. No servers, no accounts, no tracking.", color: "#3b82f6" },
   { icon: Zap, title: "Real-time, No Lag", desc: "Sub-100ms inference latency. Optimized for CPU-only devices. Gesture to speech in under half a second.", color: "#8b5cf6" },
   { icon: Heart, title: "No Setup, No Cost", desc: "Open Chrome, grant camera access, and start communicating. No installation, no training, no expensive hardware.", color: "#c63a22" },
 ];
@@ -91,7 +91,7 @@ export default function LandingPage() {
           >
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/15 text-white/80 text-sm font-medium mb-6 backdrop-blur-sm">
               <Activity className="w-3.5 h-3.5" />
-              AI-Powered Assistive Communication
+              Assistive Communication
             </div>
           </motion.div>
 
@@ -111,7 +111,7 @@ export default function LandingPage() {
             transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
             className="mt-6 text-lg sm:text-xl text-white/70 leading-relaxed max-w-2xl mx-auto"
           >
-            AI-powered communication for patients who cannot speak or move easily. 
+            Assistive communication for patients who cannot speak or move easily. 
             Use hand gestures or eye movements to express needs — 
             instantly converted to speech. No setup. No servers. No cost.
           </motion.p>
@@ -207,8 +207,8 @@ export default function LandingPage() {
       <Section>
         <SectionHeading
           label="The Solution"
-          title="How CareSpeak AI works"
-          subtitle="On-device AI that turns any laptop with a webcam into an assistive communication device."
+          title="How CareSpeak works"
+          subtitle="On-device computer vision that turns any laptop with a webcam into an assistive communication device."
         />
         <motion.div variants={stagger} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {FEATURES.map((feat, i) => {
@@ -237,7 +237,7 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
           {[
             { num: "01", title: "Camera detects", desc: "MediaPipe tracks 21 hand landmarks or 478 face landmarks in real-time via WebAssembly at 30+ FPS" },
-            { num: "02", title: "AI classifies", desc: "Rule-based classifier with temporal smoothing identifies the gesture and assigns a confidence score" },
+            { num: "02", title: "Engine classifies", desc: "Rule-based classifier with temporal smoothing identifies the gesture and assigns a confidence score" },
             { num: "03", title: "Voice speaks", desc: "Browser TTS announces the need aloud in the patient's chosen language — nurses hear it immediately" },
           ].map((step, i) => (
             <motion.div key={i} variants={fadeUp} className="text-center group">

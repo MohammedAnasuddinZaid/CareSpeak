@@ -69,7 +69,7 @@ export default function HandModePage() {
                 Hand Gesture Mode
               </div>
               <h1 className="text-3xl sm:text-4xl font-bold text-[#1f1f1f] tracking-tight">
-                AI Gesture Dashboard
+                Gesture Dashboard
               </h1>
               <p className="mt-2 text-[#6e6e6e]">
                 Raise your hand and make a gesture. Show open palm wide and hold 5s to toggle pause/resume.

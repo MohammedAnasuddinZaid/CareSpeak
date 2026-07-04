@@ -34,7 +34,7 @@ export default function AboutPage() {
       <Section>
         <motion.div variants={fadeUp} className="text-center mb-12">
           <h1 className="text-4xl sm:text-5xl font-bold text-[#1f1f1f] tracking-tight">
-            About <span className="text-[#c63a22]">CareSpeak</span> AI
+            About <span className="text-[#c63a22]">CareSpeak</span>
           </h1>
           <p className="mt-4 text-lg text-[#6e6e6e] max-w-2xl mx-auto">
             Turning any laptop with a webcam into an assistive communication device — 
@@ -61,8 +61,8 @@ export default function AboutPage() {
         <motion.div variants={fadeUp} className="card p-8 mb-12">
           <h2 className="text-xl font-bold text-[#1f1f1f] mb-4">The Solution</h2>
           <p className="text-[#6e6e6e] leading-relaxed mb-4">
-            CareSpeak AI turns any standard laptop or tablet with a webcam into a 
-            real-time assistive communication device. Using on-device AI, it tracks 
+            CareSpeak turns any standard laptop or tablet with a webcam into a 
+            real-time assistive communication device. Using on-device processing, it tracks 
             hand gestures or eye/face movements and converts them into spoken words 
             in the patient&apos;s chosen language.
           </p>
@@ -71,7 +71,7 @@ export default function AboutPage() {
             <div className="space-y-4">
               {[
                 { step: "1", title: "Camera detects", desc: "MediaPipe tracks 21 hand landmarks or 478 face landmarks in real-time via WebAssembly at 30+ FPS — all on-device, no data leaves the browser", icon: Eye },
-                { step: "2", title: "AI classifies", desc: "Rule-based classifiers with temporal smoothing identify gestures — thumbs up, thumbs down, peace sign, gaze direction, blinks, mouth openness — and assign confidence scores", icon: Layers },
+                { step: "2", title: "Engine classifies", desc: "Rule-based classifiers with temporal smoothing identify gestures — thumbs up, thumbs down, peace sign, gaze direction, blinks, mouth openness — and assign confidence scores", icon: Layers },
                 { step: "3", title: "Voice speaks", desc: "Browser-based Text-to-Speech announces the patient's need aloud in one of 8 supported languages, from English to Hindi to Arabic", icon: Volume2 },
               ].map((item, i) => {
                 const Icon = item.icon;
@@ -103,8 +103,8 @@ export default function AboutPage() {
             </motion.p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {[
-                { icon: Shield, title: "Privacy First", desc: "Zero video, images, or data ever leave the device. All AI runs locally in the browser via WebAssembly." },
-                { icon: Hand, title: "On-Device AI", desc: "MediaPipe machine learning models run entirely in-browser. No servers, no cloud, no API calls." },
+                { icon: Shield, title: "Privacy First", desc: "Zero video, images, or data ever leave the device. All processing runs locally in the browser via WebAssembly." },
+                { icon: Hand, title: "On-Device Processing", desc: "MediaPipe models run entirely in-browser. No servers, no cloud, no API calls." },
                 { icon: Zap, title: "Real-Time Feedback", desc: "Sub-100ms inference latency with temporal smoothing for jitter-free, responsive gesture recognition." },
                 { icon: Globe, title: "Multi-Language", desc: "8 languages supported out of the box. Voice output in the patient's preferred language." },
               ].map((item, i) => {
@@ -163,7 +163,7 @@ export default function AboutPage() {
               {[
                 { name: "Next.js 15", desc: "App Router, React 19, Server Components" },
                 { name: "TypeScript", desc: "Strict mode, full type safety" },
-                { name: "MediaPipe", desc: "On-device WASM AI models" },
+                { name: "MediaPipe", desc: "On-device WASM models" },
                 { name: "Web Speech API", desc: "Multi-language TTS" },
                 { name: "Tailwind CSS v4", desc: "Utility-first styling" },
                 { name: "Framer Motion", desc: "Tasteful micro-interactions" },

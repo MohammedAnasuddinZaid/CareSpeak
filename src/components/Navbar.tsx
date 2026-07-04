@@ -46,14 +46,14 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <a href="/" className="flex items-center gap-2.5 shrink-0 group">
-            <div className="w-9 h-9 rounded-xl bg-[#c63a22] flex items-center justify-center transition-all duration-200 group-hover:shadow-md group-hover:shadow-[#c63a22]/20">
-              <span className="text-white font-extrabold text-sm tracking-tight">CS</span>
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:shadow-md group-hover:shadow-[#c63a22]/20 overflow-hidden">
+              <img src="/logo.png" alt="CareSpeak" className="w-full h-full object-cover" />
             </div>
             <div className="hidden sm:block">
               <span className={`font-bold text-lg tracking-tight transition-colors duration-300 ${showSolid ? "text-[#1f1f1f]" : "text-white"}`}>
                 CareSpeak
               </span>
-              <span className="text-[#c63a22] font-bold text-lg"> AI</span>
+              
             </div>
           </a>
 
