@@ -41,9 +41,41 @@ function getDescription(gestureName: string, lang: SupportedLanguage): string {
   return fallback[gestureName] ?? gestureName;
 }
 
-function findVoiceForLang(lang: string): SpeechSynthesisVoice | null {
-  try {
+let cachedVoices: SpeechSynthesisVoice[] | null = null;
+let voicesLoaded = false;
+
+function ensureVoices(): Promise<SpeechSynthesisVoice[]> {
+  if (voicesLoaded && cachedVoices && cachedVoices.length > 0) {
+    return Promise.resolve(cachedVoices);
+  }
+  return new Promise((resolve) => {
     const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      cachedVoices = voices;
+      voicesLoaded = true;
+      resolve(voices);
+      return;
+    }
+    window.speechSynthesis.onvoiceschanged = () => {
+      const v = window.speechSynthesis.getVoices();
+      cachedVoices = v;
+      voicesLoaded = true;
+      resolve(v);
+      window.speechSynthesis.onvoiceschanged = null;
+    };
+    setTimeout(() => {
+      if (!voicesLoaded) {
+        const v = window.speechSynthesis.getVoices();
+        cachedVoices = v;
+        voicesLoaded = true;
+        resolve(v);
+      }
+    }, 1000);
+  });
+}
+
+function findVoiceForLang(lang: string, voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
+  try {
     if (voices.length === 0) return null;
 
     const langLower = lang.toLowerCase();
@@ -61,10 +93,12 @@ function findVoiceForLang(lang: string): SpeechSynthesisVoice | null {
   } catch { return null; }
 }
 
-function doSpeak(text: string, lang: string): void {
+async function doSpeak(text: string, lang: string): Promise<void> {
   try {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
     if (!text || text.trim().length === 0) return;
+
+    const voices = await ensureVoices();
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.85;
@@ -72,7 +106,7 @@ function doSpeak(text: string, lang: string): void {
     utterance.volume = 1.0;
     utterance.lang = lang;
 
-    const voice = findVoiceForLang(lang);
+    const voice = findVoiceForLang(lang, voices);
     if (voice) utterance.voice = voice;
 
     if (window.speechSynthesis.speaking) {
@@ -136,9 +170,14 @@ export class VoiceAlert {
     if (gestureName) { this.playCount[gestureName] = 0; } else { this.playCount = {}; }
   }
 
-  replay(text: string): void {
+  replay(text: string, lang?: SupportedLanguage): void {
     if (!this.enabled) return;
-    doSpeak(text, this.language);
+    if (lang) {
+      const desc = getDescription(text, lang);
+      doSpeak(desc, lang);
+    } else {
+      doSpeak(text, this.language);
+    }
   }
 
   stop(): void {

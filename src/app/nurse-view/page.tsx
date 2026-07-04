@@ -32,6 +32,8 @@ export default function NurseViewPage() {
   const [paired, setPaired] = useState(false);
   const [remoteMetrics, setRemoteMetrics] = useState<Record<string, PatientMetrics>>({});
   const [syncStatus, setSyncStatus] = useState<"disconnected" | "connected" | "polling">("disconnected");
+  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+  const [now, setNow] = useState(Date.now());
   const syncRef = useRef<NetworkSync | null>(null);
 
   const entriesForActions = useMemo(() =>
@@ -42,6 +44,7 @@ export default function NurseViewPage() {
     const entries = loadGestureLog();
     setLog(entries);
     setLatest(entries[0] ?? null);
+    if (entries.length > 0) setLastUpdated(entries[0].timestamp);
 
     const session = getSession();
     if (session?.sessionId) {
@@ -56,9 +59,11 @@ export default function NurseViewPage() {
           return [entry, ...prev];
         });
         setLatest(entry);
+        setLastUpdated(Date.now());
       },
       onMetrics: (metrics) => {
         setRemoteMetrics((prev) => ({ ...prev, ...metrics }));
+        setLastUpdated(Date.now());
       },
     });
     syncRef.current = sync;
@@ -103,9 +108,11 @@ export default function NurseViewPage() {
           return [entry, ...prev];
         });
         setLatest(entry);
+        setLastUpdated(Date.now());
       },
       onMetrics: (metrics) => {
         setRemoteMetrics((prev) => ({ ...prev, ...metrics }));
+        setLastUpdated(Date.now());
       },
     });
     syncRef.current = sync;
@@ -148,6 +155,12 @@ export default function NurseViewPage() {
       default: return log;
     }
   }, [log, filter]);
+
+  useEffect(() => {
+    if (!paired) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [paired]);
 
   const formatTime = (ts: number) => {
     const d = new Date(ts);
@@ -206,9 +219,12 @@ export default function NurseViewPage() {
         )}
 
         {paired && (
-          <div className="mb-6 flex items-center gap-2 px-4 py-2 rounded-xl bg-[#ecfdf5] border border-[#a7f3d0] text-[#22a67e] text-xs font-medium w-fit">
-            <Wifi className="w-3.5 h-3.5" />
-            Connected — {syncStatus === "polling" ? "Polling" : "Live"}
+          <div className="mb-6 flex items-center gap-3 px-4 py-2 rounded-xl bg-[#ecfdf5] border border-[#a7f3d0] text-[#22a67e] text-xs font-medium w-fit">
+            <span className="relative flex w-2.5 h-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#22a67e] opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#22a67e]" />
+            </span>
+            Live{lastUpdated ? ` · ${Math.max(0, Math.floor((now - lastUpdated) / 1000))}s ago` : ""}
           </div>
         )}
 

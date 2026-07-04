@@ -194,9 +194,12 @@ export function useHandGesture(onBroadcastAlert?: (gesture: string, description:
         if (entry) {
           voiceAlert.speak(smoothed.gesture, "hand");
           if (smoothed.gesture !== lastLoggedGesture.current) {
-            addGestureLog(smoothed.gesture, entry.description, smoothed.confidence, "hand", voiceAlert.getLanguage());
             lastLoggedGesture.current = smoothed.gesture;
-            onBroadcastAlert?.(smoothed.gesture, entry.description, smoothed.confidence);
+            if (onBroadcastAlert) {
+              onBroadcastAlert(smoothed.gesture, entry.description, smoothed.confidence);
+            } else {
+              addGestureLog(smoothed.gesture, entry.description, smoothed.confidence, "hand", voiceAlert.getLanguage());
+            }
           }
         }
       }

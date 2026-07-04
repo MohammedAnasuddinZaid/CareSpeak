@@ -26,7 +26,8 @@ export default function HandModePage() {
   const syncRef = useRef<ReturnType<typeof createNetworkSync> | null>(null);
 
   const broadcastAlert = useCallback((gesture: string, description: string, confidence: number) => {
-    const entry = addGestureLog(gesture, description, confidence, "hand");
+    const lang = voiceAlert.getLanguage();
+    const entry = addGestureLog(gesture, description, confidence, "hand", lang, sessionRef.current.sessionId);
     syncRef.current?.sendAlert({ ...entry, deviceId: sessionRef.current.deviceId, sessionId: sessionRef.current.sessionId });
   }, []);
 
@@ -53,7 +54,8 @@ export default function HandModePage() {
     const entry = HAND_GESTURE_MAP[g];
     if (entry) {
       voiceAlert.speak(g, "hand");
-      const logEntry = addGestureLog(g, entry.description, 1, "hand");
+      const lang = voiceAlert.getLanguage();
+      const logEntry = addGestureLog(g, entry.description, 1, "hand", lang, sessionRef.current.sessionId);
       syncRef.current?.sendAlert({ ...logEntry, deviceId: sessionRef.current.deviceId, sessionId: sessionRef.current.sessionId });
     }
   }, []);

@@ -22,10 +22,11 @@ export function loadGestureLog(): GestureLogEntry[] {
   } catch { return []; }
 }
 
-export function addGestureLog(gesture: string, description: string, confidence: number, type: GestureType, language = "en-US"): GestureLogEntry {
+export function addGestureLog(gesture: string, description: string, confidence: number, type: GestureType, language = "en-US", sessionId?: string): GestureLogEntry {
   const entry: GestureLogEntry = {
     id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     gesture, description, confidence, type, timestamp: Date.now(), language,
+    ...(sessionId ? { sessionId } : {}),
   };
   const log = loadGestureLog();
   log.unshift(entry);
@@ -33,7 +34,7 @@ export function addGestureLog(gesture: string, description: string, confidence: 
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(log)); } catch {}
   const channel = getChannel();
   if (channel) { try { channel.postMessage({ type: "new_gesture", entry }); } catch {} }
-  try { fetch("/api/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "new_gesture", entry }) }).catch(() => {}); } catch {}
+  try { fetch("/api/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "new_gesture", entry: { ...entry, sessionId } }) }).catch(() => {}); } catch {}
   return entry;
 }
 

@@ -4,7 +4,8 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileText, Hand, Eye, Search, Trash2, Volume2, Download, Clock, Filter, CheckCircle } from "lucide-react";
 import { loadGestureLog, subscribeToGestureUpdates, clearGestureLog, getStats } from "@/lib/gestureLog";
-import { GestureLogEntry } from "@/types";
+import { voiceAlert } from "@/lib/tts";
+import { GestureLogEntry, SupportedLanguage } from "@/types";
 
 const TYPE_CONFIG: Record<string, { icon: React.ComponentType<{ className?: string }>; text: string }> = {
   hand: { icon: Hand, text: "text-[#22a67e]" },
@@ -221,11 +222,7 @@ export default function LogsPage() {
                         </div>
                         <button
                           onClick={() => {
-                            if (typeof window !== "undefined" && window.speechSynthesis) {
-                              window.speechSynthesis.cancel();
-                              const u = new SpeechSynthesisUtterance(entry.description);
-                              window.speechSynthesis.speak(u);
-                            }
+                            voiceAlert.replay(entry.gesture, entry.language as SupportedLanguage);
                           }}
                           className="p-2 rounded-lg bg-[#f5f3f0] hover:bg-[#ececec] text-[#6e6e6e] transition-all duration-200"
                           title="Replay"

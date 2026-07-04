@@ -245,9 +245,12 @@ export function useEyeGesture(onBroadcastAlert?: (gesture: string, description: 
         if (entry) {
           voiceAlert.speak(smoothed.gesture, "eye");
           if (smoothed.gesture !== lastLoggedGesture.current) {
-            addGestureLog(smoothed.gesture, entry.description, smoothed.confidence, "eye", voiceAlert.getLanguage());
             lastLoggedGesture.current = smoothed.gesture;
-            onBroadcastAlert?.(smoothed.gesture, entry.description, smoothed.confidence);
+            if (onBroadcastAlert) {
+              onBroadcastAlert(smoothed.gesture, entry.description, smoothed.confidence);
+            } else {
+              addGestureLog(smoothed.gesture, entry.description, smoothed.confidence, "eye", voiceAlert.getLanguage());
+            }
           }
         }
       }

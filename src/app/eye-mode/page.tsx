@@ -26,7 +26,8 @@ export default function EyeModePage() {
   const syncRef = useRef<ReturnType<typeof createNetworkSync> | null>(null);
 
   const broadcastAlert = useCallback((gesture: string, description: string, confidence: number) => {
-    const entry = addGestureLog(gesture, description, confidence, "eye");
+    const lang = voiceAlert.getLanguage();
+    const entry = addGestureLog(gesture, description, confidence, "eye", lang, sessionRef.current.sessionId);
     syncRef.current?.sendAlert({ ...entry, deviceId: sessionRef.current.deviceId, sessionId: sessionRef.current.sessionId });
   }, []);
 
@@ -53,7 +54,8 @@ export default function EyeModePage() {
     const entry = EYE_GESTURE_MAP[g];
     if (entry) {
       voiceAlert.speak(g, "eye");
-      const logEntry = addGestureLog(g, entry.description, 1, "eye");
+      const lang = voiceAlert.getLanguage();
+      const logEntry = addGestureLog(g, entry.description, 1, "eye", lang, sessionRef.current.sessionId);
       syncRef.current?.sendAlert({ ...logEntry, deviceId: sessionRef.current.deviceId, sessionId: sessionRef.current.sessionId });
     }
   }, []);
