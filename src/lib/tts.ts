@@ -86,11 +86,26 @@ function findVoiceForLang(lang: string, voices: SpeechSynthesisVoice[]): SpeechS
     const prefixMatch = voices.find((v) => v.lang.toLowerCase().startsWith(prefix));
     if (prefixMatch) return prefixMatch;
 
-    const anyLocal = voices.find((v) => v.localService);
-    if (anyLocal) return anyLocal;
-
-    return voices[0] ?? null;
+    return null;
   } catch { return null; }
+}
+
+let ttsQueue: SpeechSynthesisUtterance[] = [];
+let ttsSpeaking = false;
+
+function processTtsQueue(): void {
+  if (ttsSpeaking || ttsQueue.length === 0) return;
+  ttsSpeaking = true;
+  const utterance = ttsQueue.shift()!;
+  utterance.onend = () => {
+    ttsSpeaking = false;
+    processTtsQueue();
+  };
+  utterance.onerror = () => {
+    ttsSpeaking = false;
+    processTtsQueue();
+  };
+  window.speechSynthesis.speak(utterance);
 }
 
 async function doSpeak(text: string, lang: string): Promise<void> {
@@ -98,7 +113,7 @@ async function doSpeak(text: string, lang: string): Promise<void> {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
     if (!text || text.trim().length === 0) return;
 
-    const voices = await ensureVoices();
+    await ensureVoices();
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.85;
@@ -106,14 +121,17 @@ async function doSpeak(text: string, lang: string): Promise<void> {
     utterance.volume = 1.0;
     utterance.lang = lang;
 
+    const voices = window.speechSynthesis.getVoices();
     const voice = findVoiceForLang(lang, voices);
-    if (voice) utterance.voice = voice;
-
-    if (window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
+    if (voice) {
+      utterance.voice = voice;
+      console.log(`[TTS] Voice for ${lang}: ${voice.name} (${voice.lang})`);
+    } else {
+      console.log(`[TTS] No voice match for ${lang}, using browser default`);
     }
 
-    window.speechSynthesis.speak(utterance);
+    ttsQueue.push(utterance);
+    processTtsQueue();
   } catch {}
 }
 
@@ -126,8 +144,6 @@ export class VoiceAlert {
   private enabled = true;
   private language: SupportedLanguage;
   private soundEnabled = true;
-  private speechQueue: Promise<void> = Promise.resolve();
-
   constructor(cooldownMs = 10000) {
     this.cooldownMs = cooldownMs;
     this.language = getSavedLanguage();
@@ -157,7 +173,7 @@ export class VoiceAlert {
     const description = getDescription(gestureName, this.language);
     const urgentOnly = ["HELP", "EMERGENCY"];
     if (this.soundEnabled && urgentOnly.includes(gestureName)) { playAlertSound(gestureName); }
-    this.speechQueue = this.speechQueue.then(() => doSpeak(description, this.language));
+    doSpeak(description, this.language);
   }
 
   speakDirect(text: string, lang?: SupportedLanguage): void {

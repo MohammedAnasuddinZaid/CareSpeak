@@ -178,6 +178,135 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── IDEA Section: Impact · Dynamic · Empathy ── */}
+      <section className="relative py-24 overflow-hidden bg-gradient-to-b from-[#1f1f1f] to-[#2d2d2d]">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-10 left-10 w-72 h-72 rounded-full bg-[#c63a22]/10 blur-[120px] animate-drift" />
+          <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-[#c63a22]/5 blur-[150px] animate-float-slow" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full border border-white/5 animate-spin-slow" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] rounded-full border border-white/5 animate-spin-slow" style={{ animationDirection: "reverse", animationDuration: "15s" }} />
+        </div>
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/70 text-sm font-medium mb-6 backdrop-blur-sm"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#c63a22]" />
+              Our Framework
+            </motion.div>
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight"
+            >
+              <span className="text-[#c63a22]">I</span>.
+              <span className="text-[#22a67e]">D</span>.
+              <span className="text-[#e8993e]">E</span>.
+              <span className="text-white/40">A.</span>
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="mt-4 text-white/40 text-sm tracking-[0.2em] uppercase"
+            >
+              Impact · Dynamic · Empathy · Applications
+            </motion.p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {/* I — Impact */}
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="group relative"
+            >
+              <div className="absolute -inset-1 bg-gradient-to-br from-[#c63a22]/30 to-transparent rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 hover:bg-white/[0.07] transition-all duration-300">
+                <div className="w-14 h-14 rounded-2xl bg-[#c63a22]/20 flex items-center justify-center mb-5 group-hover:scale-110 group-hover:-translate-y-1 transition-all duration-300">
+                  <span className="text-3xl font-black text-[#c63a22]">I</span>
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-1">Impact</h3>
+                <div className="w-12 h-0.5 bg-[#c63a22] mb-4 rounded-full" />
+                <p className="text-white/60 text-sm leading-relaxed">
+                  Every patient deserves to be heard. CareSpeak turns any webcam into a lifeline — 
+                  giving voice to the voiceless in ICUs, recovery rooms, and beyond. 
+                  Zero hardware. Zero setup. Zero cost.
+                </p>
+              </div>
+            </motion.div>
+
+            {/* D — Dynamic */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.35 }}
+              className="group relative"
+            >
+              <div className="absolute -inset-1 bg-gradient-to-br from-[#22a67e]/30 to-transparent rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 hover:bg-white/[0.07] transition-all duration-300">
+                <div className="w-14 h-14 rounded-2xl bg-[#22a67e]/20 flex items-center justify-center mb-5 group-hover:scale-110 group-hover:-translate-y-1 transition-all duration-300">
+                  <span className="text-3xl font-black text-[#22a67e]">D</span>
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-1">Dynamic</h3>
+                <div className="w-12 h-0.5 bg-[#22a67e] mb-4 rounded-full" />
+                <p className="text-white/60 text-sm leading-relaxed">
+                  Real-time, adaptive, alive. WebAssembly-powered AI processes 30+ frames per 
+                  second on any modern laptop. Gesture-to-speech in under 500ms. 
+                  Cross-device sync. No lag. No servers.
+                </p>
+              </div>
+            </motion.div>
+
+            {/* E — Empathy */}
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.5 }}
+              className="group relative"
+            >
+              <div className="absolute -inset-1 bg-gradient-to-br from-[#e8993e]/30 to-transparent rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 hover:bg-white/[0.07] transition-all duration-300">
+                <div className="w-14 h-14 rounded-2xl bg-[#e8993e]/20 flex items-center justify-center mb-5 group-hover:scale-110 group-hover:-translate-y-1 transition-all duration-300">
+                  <span className="text-3xl font-black text-[#e8993e]">E</span>
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-1">Empathy</h3>
+                <div className="w-12 h-0.5 bg-[#e8993e] mb-4 rounded-full" />
+                <p className="text-white/60 text-sm leading-relaxed">
+                  Behind every metric is a human. A patient who cannot press the call button. 
+                  A nurse who needs to know. CareSpeak bridges that gap with dignity — 
+                  preserving privacy while enabling care.
+                </p>
+              </div>
+            </motion.div>
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.6 }}
+            className="mt-12 text-center"
+          >
+            <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/50 text-sm">
+              <Award className="w-4 h-4 text-[#e8993e]" />
+              Applications covered below &mdash; ICU, Stroke Rehab, Post-Surgery & more
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* ── Challenge ── */}
       <Section className="bg-[#f5f3f0]">
         <SectionHeading
