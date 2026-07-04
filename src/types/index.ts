@@ -42,6 +42,14 @@ export interface GestureResult<T> {
   timestamp: number;
 }
 
+export interface PatientMetrics {
+  blinkRate?: number;
+  alertnessScore?: number;
+  eyeClosureDuration?: number;
+  movementActivity?: number;
+  lastSeen?: string;
+}
+
 export interface GestureLogEntry {
   id: string;
   gesture: string;
@@ -51,6 +59,31 @@ export interface GestureLogEntry {
   timestamp: number;
   language: string;
   acknowledged?: boolean;
+  deviceId?: string;
+  sessionId?: string;
+  patientMetrics?: PatientMetrics;
+  isEscalated?: boolean;
+  escalated?: boolean;
+  resolved?: boolean;
+  resolvedAt?: number;
+  escalatedAt?: number;
+  acknowledgedAt?: number;
+}
+
+export interface AlertAction {
+  type: "acknowledge" | "escalate" | "resolve";
+  entryId: string;
+  timestamp: number;
+  actor?: string;
+}
+
+export interface SyncMessage {
+  type: "new_gesture" | "acknowledge" | "clear" | "escalate" | "resolve" | "ping";
+  entry?: GestureLogEntry;
+  entryId?: string;
+  action?: AlertAction;
+  sessionId?: string;
+  deviceId?: string;
 }
 
 export interface ClutchState {
@@ -75,6 +108,19 @@ export interface TTSConfig {
   volume: number;
   voiceURI?: string;
   language: string;
+}
+
+export interface SessionInfo {
+  sessionId: string;
+  deviceId: string;
+  createdAt: number;
+  label?: string;
+}
+
+export interface EscalationRule {
+  type: "help_frequency" | "low_alertness" | "prolonged_inactivity";
+  threshold: number;
+  windowMs: number;
 }
 
 export type SupportedLanguage = "en-US" | "hi-IN" | "es-ES" | "fr-FR" | "de-DE" | "zh-CN" | "ar-SA" | "pt-BR";
@@ -123,3 +169,9 @@ export const ALERT_SOUNDS: Record<string, { frequency: number; duration: number;
   WATER: { frequency: 550, duration: 250, type: "triangle" },
   EMERGENCY: { frequency: 330, duration: 500, type: "sawtooth" },
 };
+
+export const ESCALATION_RULES: EscalationRule[] = [
+  { type: "help_frequency", threshold: 3, windowMs: 120000 },
+  { type: "low_alertness", threshold: 25, windowMs: 30000 },
+  { type: "prolonged_inactivity", threshold: 60000, windowMs: 60000 },
+];

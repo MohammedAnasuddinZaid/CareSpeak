@@ -1,10 +1,17 @@
 "use client";
 
+import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Eye, RotateCcw, Camera, StopCircle, Pause, ArrowLeft, ArrowRight, HelpCircle, Droplets, Sparkles, Activity, Fingerprint, Volume2 } from "lucide-react";
 import { useEyeGesture } from "@/hooks/useEyeGesture";
 import { EYE_GESTURE_MAP } from "@/types";
 import { voiceAlert } from "@/lib/tts";
+import { getOrCreateSession } from "@/lib/session";
+import { createNetworkSync } from "@/lib/networkSync";
+import { addGestureLog } from "@/lib/gestureLog";
+import QRPairingDisplay from "@/components/QRPairingDisplay";
+import DemoModeControls from "@/components/DemoModeControls";
+import PatientMetricsCard from "@/components/PatientMetricsCard";
 
 const GESTURE_GUIDE = [
   { label: "YES", desc: "Look Left", icon: ArrowLeft, gradient: "from-emerald-500 to-teal-600" },
@@ -15,15 +22,45 @@ const GESTURE_GUIDE = [
 ];
 
 export default function EyeModePage() {
+  const sessionRef = useRef(getOrCreateSession());
+  const syncRef = useRef<ReturnType<typeof createNetworkSync> | null>(null);
+
+  const broadcastAlert = useCallback((gesture: string, description: string, confidence: number) => {
+    const entry = addGestureLog(gesture, description, confidence, "eye");
+    syncRef.current?.sendAlert({ ...entry, deviceId: sessionRef.current.deviceId, sessionId: sessionRef.current.sessionId });
+  }, []);
+
   const {
     videoRef, canvasRef, gesture, confidence,
-    loading, error, cameraOn, faceDetected, isPaused, startCamera, stopCamera,
-  } = useEyeGesture();
+    loading, error, cameraOn, faceDetected, isPaused, patientMetrics, startCamera, stopCamera,
+  } = useEyeGesture(broadcastAlert);
+
+  useEffect(() => {
+    const sync = createNetworkSync({ sessionId: sessionRef.current.sessionId });
+    syncRef.current = sync;
+    return () => sync.destroy();
+  }, []);
+
+  useEffect(() => {
+    if (!cameraOn || Object.keys(patientMetrics).length === 0) return;
+    const timer = setInterval(() => {
+      syncRef.current?.sendPatientMetrics(patientMetrics, sessionRef.current.deviceId);
+    }, 2000);
+    return () => clearInterval(timer);
+  }, [cameraOn, patientMetrics]);
+
+  const handleSimulateGesture = useCallback((g: string) => {
+    const entry = EYE_GESTURE_MAP[g];
+    if (entry) {
+      voiceAlert.speak(g, "eye");
+      const logEntry = addGestureLog(g, entry.description, 1, "eye");
+      syncRef.current?.sendAlert({ ...logEntry, deviceId: sessionRef.current.deviceId, sessionId: sessionRef.current.sessionId });
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-950 pt-20 pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
@@ -38,16 +75,21 @@ export default function EyeModePage() {
                 Use your eyes and face — look left, right, open your mouth, or blink twice. Close eyes for 5s to pause.
               </p>
             </div>
-            {cameraOn && (
-              <button onClick={stopCamera}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/20 transition-all duration-200"
-              >
-                <StopCircle className="w-4 h-4" />
-                Stop Camera
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              <DemoModeControls onSimulateGesture={handleSimulateGesture} gestureType="eye" />
+              {cameraOn && (
+                <button onClick={stopCamera}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/20 transition-all duration-200"
+                >
+                  <StopCircle className="w-4 h-4" />
+                  Stop Camera
+                </button>
+              )}
+            </div>
           </div>
         </motion.div>
+
+        <QRPairingDisplay sessionId={sessionRef.current.sessionId} compact />
 
         <AnimatePresence>
           {error && (
@@ -69,7 +111,6 @@ export default function EyeModePage() {
         </AnimatePresence>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
           <div className="lg:col-span-2 space-y-6">
             <div className="relative overflow-hidden rounded-3xl aspect-[4/3] dashboard-card">
               {loading && (
@@ -125,6 +166,8 @@ export default function EyeModePage() {
                 </div>
               </div>
             )}
+
+            <PatientMetricsCard metrics={cameraOn ? patientMetrics : null} deviceName="Eye Camera" />
           </div>
 
           <div className="space-y-6">

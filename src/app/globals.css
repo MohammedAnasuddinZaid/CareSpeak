@@ -60,6 +60,33 @@
   100% { background-position: 200% 0; }
 }
 
+@keyframes siren-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.05); }
+}
+
+@keyframes metrics-glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(99, 102, 241, 0.1); }
+  50% { box-shadow: 0 0 16px rgba(99, 102, 241, 0.2); }
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.animate-siren {
+  animation: siren-pulse 1.5s ease-in-out infinite;
+}
+
+.animate-metrics-glow {
+  animation: metrics-glow 3s ease-in-out infinite;
+}
+
+.animate-breathe {
+  animation: breathe 3s ease-in-out infinite;
+}
+
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 5rem;

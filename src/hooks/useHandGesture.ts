@@ -5,7 +5,7 @@ import { HandLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 import { classifyHandGesture, HandGestureSmoother, isOpenPalm } from "@/lib/handClassifier";
 import { voiceAlert } from "@/lib/tts";
 import { addGestureLog } from "@/lib/gestureLog";
-import { HandGesture, HandData, HAND_GESTURE_MAP, SystemDiagnostics } from "@/types";
+import { HandGesture, HandData, HAND_GESTURE_MAP, SystemDiagnostics, PatientMetrics, Point } from "@/types";
 
 const WASM_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm";
 const MODEL_URL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task";
@@ -19,7 +19,11 @@ const RESTING_COOLDOWN_MS = 30000;
 
 const CONNECTIONS: [number, number][] = [[0,1],[1,2],[2,3],[3,4],[5,6],[6,7],[7,8],[9,10],[10,11],[11,12],[13,14],[14,15],[15,16],[17,18],[18,19],[19,20],[0,5],[5,9],[9,13],[13,17],[0,17]];
 
-export function useHandGesture() {
+function dist(a: Point, b: Point): number {
+  return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2 + (a.z - b.z) ** 2);
+}
+
+export function useHandGesture(onBroadcastAlert?: (gesture: string, description: string, confidence: number) => void) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const landmarkerRef = useRef<HandLandmarker | null>(null);
@@ -32,6 +36,14 @@ export function useHandGesture() {
   const lastFpsTime = useRef(0);
   const frameCount = useRef(0);
   const diagnostics = useRef<SystemDiagnostics>({ brightness: 0, trackingStable: false, fps: 0, message: null });
+
+  const metricsRef = useRef({
+    prevLandmarks: null as Point[] | null,
+    movementAccum: 0,
+    movementSamples: 0,
+    lastMetricsBroadcast: 0,
+    lastGestureTime: 0,
+  });
 
   function getEffectiveThreshold(): number {
     if (Date.now() < restState.current.cooldownUntil) return 0.85;
@@ -47,6 +59,15 @@ export function useHandGesture() {
   const [cameraOn, setCameraOn] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [pausedReason, setPausedReason] = useState<string | null>(null);
+  const [patientMetrics, setPatientMetrics] = useState<PatientMetrics>({});
+
+  function computePatientMetrics() {
+    const m = metricsRef.current;
+    const movementActivity = m.movementSamples > 0 ? Math.min(1, m.movementAccum / m.movementSamples / 0.005) : 0.5;
+    m.movementAccum = 0;
+    m.movementSamples = 0;
+    return { movementActivity: Math.round(movementActivity * 100) / 100 };
+  }
 
   const init = useCallback(async () => {
     try {
@@ -88,6 +109,7 @@ export function useHandGesture() {
     if (animRef.current) cancelAnimationFrame(animRef.current);
     if (streamRef.current) { streamRef.current.getTracks().forEach((t) => t.stop()); streamRef.current = null; }
     setCameraOn(false); setGesture(null); setConfidence(0); setNumHands(0); setIsPaused(false); setPausedReason(null);
+    setPatientMetrics({});
     smootherRef.current.reset();
     lastLoggedGesture.current = null;
     pauseState.current = { paused: false, palmCloseStart: 0 };
@@ -122,6 +144,27 @@ export function useHandGesture() {
     }
     setNumHands(hands.length);
 
+    if (hands.length > 0) {
+      const m = metricsRef.current;
+      const lm0 = hands[0].landmarks;
+      if (m.prevLandmarks && lm0.length > 0) {
+        let totalMovement = 0;
+        for (let i = 0; i < lm0.length; i++) {
+          totalMovement += dist(lm0[i], m.prevLandmarks[i]);
+        }
+        m.movementAccum += totalMovement / lm0.length;
+        m.movementSamples++;
+      }
+      m.prevLandmarks = lm0.map((p) => ({ ...p }));
+
+      const now = Date.now();
+      if (now - m.lastMetricsBroadcast > 1000) {
+        const metrics = computePatientMetrics();
+        setPatientMetrics(metrics);
+        m.lastMetricsBroadcast = now;
+      }
+    }
+
     if (hands.length > 0 && isOpenPalm(hands[0].landmarks)) {
       const now = Date.now();
       if (pauseState.current.palmCloseStart === 0) pauseState.current.palmCloseStart = now;
@@ -153,6 +196,7 @@ export function useHandGesture() {
           if (smoothed.gesture !== lastLoggedGesture.current) {
             addGestureLog(smoothed.gesture, entry.description, smoothed.confidence, "hand", voiceAlert.getLanguage());
             lastLoggedGesture.current = smoothed.gesture;
+            onBroadcastAlert?.(smoothed.gesture, entry.description, smoothed.confidence);
           }
         }
       }
@@ -230,5 +274,5 @@ export function useHandGesture() {
     return () => { stopCamera(); if (animRef.current) cancelAnimationFrame(animRef.current); };
   }, []);
 
-  return { videoRef, canvasRef, gesture, confidence, fps, numHands, loading, error, cameraOn, isPaused, pausedReason, diagnostics: diagnostics.current, startCamera, stopCamera };
+  return { videoRef, canvasRef, gesture, confidence, fps, numHands, loading, error, cameraOn, isPaused, pausedReason, diagnostics: diagnostics.current, patientMetrics, startCamera, stopCamera };
 }
