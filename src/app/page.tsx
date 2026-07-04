@@ -1,0 +1,291 @@
+"use client";
+
+import { useRef } from "react";
+import { motion, useInView } from "framer-motion";
+import { ArrowRight, Hand, Eye, Volume2, ShieldCheck, Zap, Heart, CheckCircle, Sparkles, Activity } from "lucide-react";
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 30 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] as const } },
+};
+
+const stagger = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+};
+
+const FEATURES = [
+  { icon: Hand, title: "Hand Gesture Recognition", desc: "Five distinct gestures — thumbs up, thumbs down, peace sign, open palm, and both hands open — detected via on-device AI. Works in any lighting.", gradient: "from-indigo-500 to-violet-600" },
+  { icon: Eye, title: "Eye Movement Tracking", desc: "Iris tracking and blink detection let patients communicate by gaze direction, double-blinks, and mouth gestures — no hand movement required.", gradient: "from-emerald-500 to-teal-600" },
+  { icon: Volume2, title: "Instant Voice Alerts", desc: "Every gesture triggers a spoken alert in the patient's chosen language. Nurses hear the need without watching the screen.", gradient: "from-amber-500 to-orange-600" },
+  { icon: ShieldCheck, title: "100% Private & Secure", desc: "All AI runs in-browser via WebAssembly. No video, no data, no images ever leave the device. No servers, no accounts, no tracking.", gradient: "from-cyan-500 to-blue-600" },
+  { icon: Zap, title: "Real-time, No Lag", desc: "Sub-100ms inference latency. Optimized for CPU-only devices. Gesture to speech in under half a second.", gradient: "from-rose-500 to-pink-600" },
+  { icon: Heart, title: "No Setup, No Cost", desc: "Open Chrome, grant camera access, and start communicating. No installation, no training, no expensive hardware.", gradient: "from-violet-500 to-purple-600" },
+];
+
+const STATS = [
+  { value: "478", label: "Face landmarks tracked per frame", icon: Eye },
+  { value: "21", label: "Hand landmarks tracked per hand", icon: Hand },
+  { value: "8", label: "Supported languages", icon: Volume2 },
+  { value: "30+", label: "Frames per second", icon: Zap },
+];
+
+function SectionHeading({ label, title, subtitle }: { label?: string; title: string; subtitle?: string }) {
+  return (
+    <div className="text-center mb-16">
+      {label && (
+        <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-sm font-medium mb-4">
+          <Sparkles className="w-3.5 h-3.5" />
+          {label}
+        </motion.div>
+      )}
+      <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white tracking-tight">
+        {title}
+      </motion.h2>
+      {subtitle && (
+        <motion.p variants={fadeUp} className="mt-4 text-lg text-slate-400 max-w-2xl mx-auto">
+          {subtitle}
+        </motion.p>
+      )}
+    </div>
+  );
+}
+
+function Section({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
+  return (
+    <section ref={ref} className={`py-24 ${className}`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial="hidden"
+          animate={isInView ? "visible" : "hidden"}
+          variants={stagger}
+        >
+          {children}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+export default function LandingPage() {
+  return (
+    <div className="overflow-hidden bg-slate-950">
+
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        <div className="absolute inset-0">
+          <video autoPlay muted loop playsInline poster="/hero-bg.jpg" className="w-full h-full object-cover">
+            <source src="/hero-bg.mp4" type="video/mp4" />
+          </video>
+          <div className="absolute inset-0 hero-overlay" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/20" />
+        </div>
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-72 h-72 rounded-full bg-indigo-500/10 blur-[120px]" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full bg-purple-500/10 blur-[120px]" />
+        </div>
+
+        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-indigo-300 text-sm font-medium mb-6 backdrop-blur-sm">
+              <Activity className="w-3.5 h-3.5" />
+              AI-Powered Assistive Communication
+            </div>
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            className="text-5xl sm:text-6xl lg:text-8xl font-extrabold text-white leading-[1.05] tracking-tight"
+          >
+            Giving Every Patient{" "}
+            <span className="gradient-text">a Voice</span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-6 text-lg sm:text-xl text-slate-300 leading-relaxed max-w-2xl mx-auto"
+          >
+            AI-powered communication for patients who cannot speak or move easily. 
+            Use hand gestures or eye movements to express needs — 
+            instantly converted to speech. No setup. No servers. No cost.
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="mt-10 flex flex-col sm:flex-row gap-4 justify-center"
+          >
+            <a href="/hand-mode"
+              className="group inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold text-lg shadow-xl shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+            >
+              <Hand className="w-5 h-5 transition-transform group-hover:-rotate-6" />
+              Try Hand Mode
+              <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
+            </a>
+            <a href="/eye-mode"
+              className="group inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-semibold text-lg hover:bg-white/10 hover:border-white/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+            >
+              <Eye className="w-5 h-5 transition-transform group-hover:-rotate-6" />
+              Try Eye Mode
+              <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
+            </a>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+            className="mt-16 flex flex-wrap items-center justify-center gap-8 text-sm text-slate-500"
+          >
+            {["Works in Chrome", "No server required", "100% private"].map((text, i) => (
+              <span key={i} className="flex items-center gap-1.5">
+                <CheckCircle className="w-4 h-4 text-emerald-500/70" />
+                {text}
+              </span>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      <section className="relative -mt-20 pb-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="grid grid-cols-2 md:grid-cols-4 gap-4"
+          >
+            {STATS.map((stat, i) => {
+              const Icon = stat.icon;
+              return (
+                <div key={i} className="dashboard-card p-6 text-center">
+                  <Icon className="w-6 h-6 text-indigo-400 mx-auto mb-3" />
+                  <div className="text-3xl font-bold text-white">{stat.value}</div>
+                  <div className="text-xs text-slate-500 mt-1">{stat.label}</div>
+                </div>
+              );
+            })}
+          </motion.div>
+        </div>
+      </section>
+
+      <Section className="bg-slate-950">
+        <SectionHeading
+          label="The Challenge"
+          title="Millions cannot communicate basic needs"
+          subtitle="Hospitalized patients who are intubated, paralyzed, or speech-impaired struggle to express pain, thirst, or the need for help. Nurses cannot always be at the bedside."
+        />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          {[
+            { title: "ICU & Critical Care", desc: "Patients on ventilators who cannot speak due to breathing tubes", icon: Activity },
+            { title: "Stroke & Paralysis", desc: "Individuals with limited or no limb movement who need alternative communication", icon: Heart },
+            { title: "Post-Surgery Recovery", desc: "Patients emerging from anesthesia with temporary speech and mobility impairment", icon: Activity },
+          ].map((item, i) => {
+            const Icon = item.icon;
+            return (
+              <motion.div key={i} variants={fadeUp} className="dashboard-card p-6">
+                <Icon className="w-8 h-8 text-indigo-400 mb-3" />
+                <h3 className="font-bold text-white mb-2">{item.title}</h3>
+                <p className="text-sm text-slate-400">{item.desc}</p>
+              </motion.div>
+            );
+          })}
+        </div>
+      </Section>
+
+      <Section className="bg-slate-900/50">
+        <SectionHeading
+          label="The Solution"
+          title="How CareSpeak AI works"
+          subtitle="On-device AI that turns any laptop with a webcam into an assistive communication device."
+        />
+        <motion.div variants={stagger} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {FEATURES.map((feat, i) => {
+            const Icon = feat.icon;
+            return (
+              <motion.div key={i} variants={fadeUp} className="group dashboard-card p-8 card-hover">
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feat.gradient} flex items-center justify-center mb-5 shadow-lg transition-transform duration-300 group-hover:scale-110 group-hover:-translate-y-1`}>
+                  <Icon className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">{feat.title}</h3>
+                <p className="text-slate-400 text-sm leading-relaxed">{feat.desc}</p>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      </Section>
+
+      <Section>
+        <SectionHeading
+          title="Three simple steps"
+          subtitle="From camera to voice alert in under 500ms"
+        />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+          {[
+            { num: "01", title: "Camera detects", desc: "MediaPipe tracks 21 hand landmarks or 478 face landmarks in real-time via WebAssembly at 30+ FPS", gradient: "from-indigo-500 to-blue-600" },
+            { num: "02", title: "AI classifies", desc: "Rule-based classifier with temporal smoothing identifies the gesture and assigns a confidence score", gradient: "from-purple-500 to-pink-600" },
+            { num: "03", title: "Voice speaks", desc: "Browser TTS announces the need aloud in the patient's chosen language — nurses hear it immediately", gradient: "from-emerald-500 to-teal-600" },
+          ].map((step, i) => (
+            <motion.div key={i} variants={fadeUp} className="text-center group">
+              <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${step.gradient} flex items-center justify-center mx-auto mb-5 shadow-xl shadow-indigo-500/10 group-hover:scale-110 transition-all duration-300`}>
+                <span className="text-2xl font-bold text-white">{step.num}</span>
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3">{step.title}</h3>
+              <p className="text-slate-400 text-sm leading-relaxed max-w-xs mx-auto">{step.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+      </Section>
+
+      <section className="relative py-24 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-700 to-indigo-900" />
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-white/5 blur-[100px]" />
+          <div className="absolute bottom-0 left-0 w-96 h-96 rounded-full bg-indigo-400/10 blur-[100px]" />
+        </div>
+        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <h2 className="text-4xl sm:text-5xl font-bold text-white leading-tight">
+              Ready to give every patient a voice?
+            </h2>
+            <p className="mt-4 text-lg text-indigo-200">
+              No installation. No setup. Just open Chrome and start communicating.
+            </p>
+            <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+              <a href="/hand-mode"
+                className="group inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl bg-white text-indigo-700 font-semibold text-lg shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+              >
+                <Hand className="w-5 h-5" />
+                Try Hand Mode
+                <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
+              </a>
+              <a href="/eye-mode"
+                className="group inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl bg-white/10 text-white border border-white/20 font-semibold text-lg hover:bg-white/20 hover:border-white/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+              >
+                <Eye className="w-5 h-5" />
+                Try Eye Mode
+                <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
+              </a>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+    </div>
+  );
+}
