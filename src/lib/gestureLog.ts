@@ -33,6 +33,7 @@ export function addGestureLog(gesture: string, description: string, confidence: 
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(log)); } catch {}
   const channel = getChannel();
   if (channel) { try { channel.postMessage({ type: "new_gesture", entry }); } catch {} }
+  try { fetch("/api/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "new_gesture", entry }) }).catch(() => {}); } catch {}
   return entry;
 }
 

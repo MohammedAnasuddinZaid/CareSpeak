@@ -41,18 +41,24 @@ function getDescription(gestureName: string, lang: SupportedLanguage): string {
   return fallback[gestureName] ?? gestureName;
 }
 
-let voicesReady = false;
-
-function ensureVoices(): void {
-  if (voicesReady || typeof window === "undefined" || !window.speechSynthesis) return;
+function findVoiceForLang(lang: string): SpeechSynthesisVoice | null {
   try {
     const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) { voicesReady = true; return; }
-    window.speechSynthesis.onvoiceschanged = () => {
-      const v = window.speechSynthesis.getVoices();
-      if (v.length > 0) voicesReady = true;
-    };
-  } catch {}
+    if (voices.length === 0) return null;
+
+    const langLower = lang.toLowerCase();
+    const exact = voices.find((v) => v.lang.toLowerCase() === langLower);
+    if (exact) return exact;
+
+    const prefix = langLower.split("-")[0];
+    const prefixMatch = voices.find((v) => v.lang.toLowerCase().startsWith(prefix));
+    if (prefixMatch) return prefixMatch;
+
+    const anyLocal = voices.find((v) => v.localService);
+    if (anyLocal) return anyLocal;
+
+    return voices[0] ?? null;
+  } catch { return null; }
 }
 
 function doSpeak(text: string, lang: string): void {
@@ -60,17 +66,18 @@ function doSpeak(text: string, lang: string): void {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
     if (!text || text.trim().length === 0) return;
 
-    // Only cancel if something is actively speaking to avoid Chrome's
-    // cancel+speak-in-same-callstack bug that silently drops speech.
-    if (window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
-    }
-
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.85;
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
     utterance.lang = lang;
+
+    const voice = findVoiceForLang(lang);
+    if (voice) utterance.voice = voice;
+
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+    }
 
     window.speechSynthesis.speak(utterance);
   } catch {}
@@ -90,7 +97,6 @@ export class VoiceAlert {
   constructor(cooldownMs = 10000) {
     this.cooldownMs = cooldownMs;
     this.language = getSavedLanguage();
-    ensureVoices();
   }
 
   setEnabled(v: boolean) { this.enabled = v; }
@@ -100,7 +106,6 @@ export class VoiceAlert {
   setLanguage(lang: SupportedLanguage) {
     this.language = lang;
     saveLanguage(lang);
-    ensureVoices();
     const greeting = GREETINGS[lang] || GREETINGS["en-US"];
     doSpeak(greeting, lang);
   }
