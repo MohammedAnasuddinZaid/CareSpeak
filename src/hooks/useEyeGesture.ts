@@ -109,8 +109,9 @@ export function useEyeGesture() {
     setFaceDetected(!!hasFace);
 
     let raw = null;
+    let faceLm: { x: number; y: number; z: number }[] | null = null;
     if (hasFace) {
-      const faceLm = result.faceLandmarks[0].map((lm) => ({ x: lm.x, y: lm.y, z: lm.z ?? 0 }));
+      faceLm = result.faceLandmarks[0].map((lm) => ({ x: lm.x, y: lm.y, z: lm.z ?? 0 }));
       raw = classifyEyeGesture(faceLm);
     }
 
