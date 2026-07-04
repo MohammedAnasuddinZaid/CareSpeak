@@ -3,6 +3,17 @@ import { playAlertSound } from "./alertSounds";
 
 const LANG_KEY = "carespeak_language";
 
+const GREETINGS: Record<SupportedLanguage, string> = {
+  "en-US": "Hello, I am using CareSpeak AI to communicate.",
+  "hi-IN": "नमस्ते, मैं केयरस्पीक एआई का उपयोग करके बात कर रहा हूँ।",
+  "es-ES": "Hola, estoy usando CareSpeak AI para comunicarme.",
+  "fr-FR": "Bonjour, j'utilise CareSpeak AI pour communiquer.",
+  "de-DE": "Hallo, ich benutze CareSpeak AI zur Kommunikation.",
+  "zh-CN": "你好，我正在使用CareSpeak AI进行交流。",
+  "ar-SA": "مرحباً، أنا أستخدم كيرسبيك أي آي للتواصل.",
+  "pt-BR": "Olá, estou usando o CareSpeak AI para me comunicar.",
+};
+
 function getSavedLanguage(): SupportedLanguage {
   if (typeof window === "undefined") return "en-US";
   try {
@@ -34,83 +45,100 @@ let voiceCache: SpeechSynthesisVoice[] | null = null;
 
 function getCachedVoices(): SpeechSynthesisVoice[] {
   if (voiceCache && voiceCache.length > 0) return voiceCache;
-  const voices = window.speechSynthesis.getVoices();
-  if (voices.length > 0) voiceCache = voices;
-  return voices;
+  try {
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) voiceCache = voices;
+    return voices;
+  } catch { return []; }
 }
 
 function findVoiceForLang(lang: SupportedLanguage): SpeechSynthesisVoice | null {
-  const voices = getCachedVoices();
-  if (voices.length === 0) return null;
+  try {
+    const voices = getCachedVoices();
+    if (voices.length === 0) return null;
 
-  const langPrefix = lang.split("-")[0].toLowerCase();
+    const langPrefix = lang.split("-")[0].toLowerCase();
 
-  const exact = voices.find((v) => v.lang.toLowerCase() === lang.toLowerCase());
-  if (exact) return exact;
+    const exact = voices.find((v) => v.lang.toLowerCase() === lang.toLowerCase());
+    if (exact) return exact;
 
-  const prefixMatch = voices.find((v) => v.lang.toLowerCase().startsWith(langPrefix));
-  if (prefixMatch) return prefixMatch;
+    const prefixMatch = voices.find((v) => v.lang.toLowerCase().startsWith(langPrefix));
+    if (prefixMatch) return prefixMatch;
 
-  const fallbackMap: Record<string, string> = {
-    "hi": "hi", "es": "es", "fr": "fr", "de": "de",
-    "zh": "zh", "ar": "ar", "pt": "pt", "en": "en",
-  };
-  const fallbackPrefix = fallbackMap[langPrefix];
-  if (fallbackPrefix) {
-    const fallbackVoice = voices.find((v) => v.lang.toLowerCase().startsWith(fallbackPrefix));
-    if (fallbackVoice) return fallbackVoice;
-  }
+    const fallbackMap: Record<string, string> = {
+      hi: "hi", es: "es", fr: "fr", de: "de",
+      zh: "zh", ar: "ar", pt: "pt", en: "en",
+    };
+    const fallbackPrefix = fallbackMap[langPrefix];
+    if (fallbackPrefix) {
+      const fb = voices.find((v) => v.lang.toLowerCase().startsWith(fallbackPrefix));
+      if (fb) return fb;
+    }
 
-  const anyLocal = voices.find((v) => v.localService);
-  if (anyLocal) return anyLocal;
+    const anyLocal = voices.find((v) => v.localService);
+    if (anyLocal) return anyLocal;
 
-  return voices[0] ?? null;
+    return voices[0] ?? null;
+  } catch { return null; }
 }
 
 let voicesLoaded = false;
+let ensurePromise: Promise<void> | null = null;
 
 function ensureVoices(): Promise<void> {
-  return new Promise((resolve) => {
+  if (ensurePromise) return ensurePromise;
+  ensurePromise = new Promise((resolve) => {
     if (typeof window === "undefined" || !window.speechSynthesis) { resolve(); return; }
-    const existing = window.speechSynthesis.getVoices();
-    if (existing.length > 0) {
-      voiceCache = existing;
-      voicesLoaded = true;
-      resolve();
-      return;
-    }
-    window.speechSynthesis.onvoiceschanged = () => {
-      const v = window.speechSynthesis.getVoices();
-      if (v.length > 0) {
-        voiceCache = v;
+    try {
+      const existing = window.speechSynthesis.getVoices();
+      if (existing.length > 0) {
+        voiceCache = existing;
         voicesLoaded = true;
+        resolve();
+        return;
       }
-      resolve();
-    };
-    setTimeout(resolve, 2000);
+      window.speechSynthesis.onvoiceschanged = () => {
+        try {
+          const v = window.speechSynthesis.getVoices();
+          if (v.length > 0) { voiceCache = v; voicesLoaded = true; }
+        } catch {}
+        resolve();
+      };
+    } catch { resolve(); }
+    setTimeout(resolve, 3000);
   });
+  return ensurePromise;
 }
 
 function doSpeak(text: string, lang: SupportedLanguage): Promise<void> {
   return new Promise((resolve) => {
-    if (typeof window === "undefined" || !window.speechSynthesis) { resolve(); return; }
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.9;
-    utterance.pitch = 1.0;
-    utterance.volume = 1.0;
-    utterance.lang = lang;
+    try {
+      if (typeof window === "undefined" || !window.speechSynthesis) { resolve(); return; }
+      if (!text || text.trim().length === 0) { resolve(); return; }
 
-    const voice = findVoiceForLang(lang);
-    if (voice) utterance.voice = voice;
+      window.speechSynthesis.cancel();
 
-    let timedOut = false;
-    const timeout = setTimeout(() => { timedOut = true; resolve(); }, 4000);
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.85;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+      utterance.lang = lang;
 
-    utterance.onend = () => { if (!timedOut) { clearTimeout(timeout); resolve(); } };
-    utterance.onerror = () => { if (!timedOut) { clearTimeout(timeout); resolve(); } };
+      const voice = findVoiceForLang(lang);
+      if (voice) utterance.voice = voice;
 
-    window.speechSynthesis.speak(utterance);
+      let done = false;
+      const timeout = setTimeout(() => { if (!done) { done = true; resolve(); } }, 5000);
+
+      utterance.onend = () => { if (!done) { done = true; clearTimeout(timeout); resolve(); } };
+      utterance.onerror = () => { if (!done) { done = true; clearTimeout(timeout); resolve(); } };
+
+      setTimeout(() => {
+        try {
+          window.speechSynthesis.speak(utterance);
+        } catch { if (!done) { done = true; resolve(); } }
+      }, 80);
+    } catch { resolve(); }
   });
 }
 
@@ -139,7 +167,13 @@ export class VoiceAlert {
   setEnabled(v: boolean) { this.enabled = v; }
   setSoundEnabled(v: boolean) { this.soundEnabled = v; }
   getLanguage(): SupportedLanguage { return this.language; }
-  setLanguage(lang: SupportedLanguage) { this.language = lang; saveLanguage(lang); }
+
+  setLanguage(lang: SupportedLanguage) {
+    this.language = lang;
+    saveLanguage(lang);
+    const greeting = GREETINGS[lang] || GREETINGS["en-US"];
+    this.speakDirect(greeting, lang);
+  }
 
   speak(gestureName: string, type: GestureType = "hand"): void {
     if (!this.enabled) return;
@@ -173,7 +207,13 @@ export class VoiceAlert {
   }
 
   stop(): void {
-    if (typeof window !== "undefined" && window.speechSynthesis) { window.speechSynthesis.cancel(); }
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      try { window.speechSynthesis.cancel(); } catch {}
+    }
+  }
+
+  getGreeting(lang: SupportedLanguage): string {
+    return GREETINGS[lang] || GREETINGS["en-US"];
   }
 }
 
