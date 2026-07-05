@@ -92,12 +92,12 @@ export function useCctvFeed({ feedUrl, mode, sessionId, deviceId, onGesture }: U
   }, [mode]);
 
   useEffect(() => {
-    init();
+    if (feedUrl) init();
     return () => {
       if (animRef.current) cancelAnimationFrame(animRef.current);
       if (videoRef.current) { videoRef.current.src = ""; }
     };
-  }, [init]);
+  }, [init, feedUrl]);
 
   const startFeed = useCallback(() => {
     if (!videoRef.current || streamAttempted.current) return;
@@ -285,10 +285,10 @@ export function useCctvFeed({ feedUrl, mode, sessionId, deviceId, onGesture }: U
   }, [mode, confidence, sessionId, onGesture]);
 
   useEffect(() => {
-    if (!loading && landmarkerRef.current && !feedReady) {
+    if (!loading && landmarkerRef.current && !feedReady && feedUrl) {
       startFeed();
     }
-  }, [loading, feedReady, startFeed]);
+  }, [loading, feedReady, startFeed, feedUrl]);
 
   return { videoRef, canvasRef, gesture, confidence, loading, error, feedReady, patientMetrics };
 }
