@@ -94,18 +94,36 @@ let ttsQueue: SpeechSynthesisUtterance[] = [];
 let ttsSpeaking = false;
 
 function processTtsQueue(): void {
-  if (ttsSpeaking || ttsQueue.length === 0) return;
+  if (ttsQueue.length === 0) return;
+  if (ttsSpeaking) return;
+
   ttsSpeaking = true;
   const utterance = ttsQueue.shift()!;
+
+  const safetyTimer = setTimeout(() => {
+    ttsSpeaking = false;
+    processTtsQueue();
+  }, 10000);
+
+  utterance.onstart = () => clearTimeout(safetyTimer);
   utterance.onend = () => {
+    clearTimeout(safetyTimer);
     ttsSpeaking = false;
     processTtsQueue();
   };
   utterance.onerror = () => {
+    clearTimeout(safetyTimer);
     ttsSpeaking = false;
     processTtsQueue();
   };
-  window.speechSynthesis.speak(utterance);
+
+  try {
+    window.speechSynthesis.speak(utterance);
+  } catch {
+    clearTimeout(safetyTimer);
+    ttsSpeaking = false;
+    processTtsQueue();
+  }
 }
 
 async function doSpeak(text: string, lang: string): Promise<void> {

@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
-import { ArrowRight, Hand, Eye, Volume2, Shield, Zap, Heart, CheckCircle, Sparkles, Activity, Users } from "lucide-react";
+import { ArrowRight, Hand, Eye, Volume2, Shield, Zap, Heart, CheckCircle, Sparkles, Activity, Users, Camera } from "lucide-react";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -18,6 +18,7 @@ const FEATURES = [
   { icon: Hand, title: "Hand Gesture Recognition", desc: "Five distinct gestures — thumbs up, thumbs down, peace sign, open palm, and both hands — detected via on-device computer vision. Works in any lighting.", color: "#c63a22" },
   { icon: Eye, title: "Eye Movement Tracking", desc: "Iris tracking and blink detection let patients communicate by gaze direction, double-blinks, and mouth gestures — no hand movement required.", color: "#22a67e" },
   { icon: Volume2, title: "Instant Voice Alerts", desc: "Every gesture triggers a spoken alert in the patient's chosen language. Nurses hear the need without watching the screen.", color: "#e8993e" },
+  { icon: Camera, title: "CCTV Integration", desc: "Connect any IP camera or phone camera for remote patient monitoring. Full-screen kiosk mode with real-time gesture detection.", color: "#8b5cf6" },
   { icon: Shield, title: "100% Private & Secure", desc: "All processing runs in-browser via WebAssembly. No video, no data, no images ever leave the device. No servers, no accounts, no tracking.", color: "#3b82f6" },
   { icon: Zap, title: "Real-time, No Lag", desc: "Sub-100ms inference latency. Optimized for CPU-only devices. Gesture to speech in under half a second.", color: "#8b5cf6" },
   { icon: Heart, title: "No Setup, No Cost", desc: "Open Chrome, grant camera access, and start communicating. No installation, no training, no expensive hardware.", color: "#c63a22" },
