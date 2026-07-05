@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useRef, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Wifi, WifiOff, Eye, Hand, Maximize2, Play, Monitor, Smartphone, HelpCircle, ExternalLink, X, Settings } from "lucide-react";
+import { Camera, Wifi, WifiOff, Eye, Hand, Maximize2, Play, Monitor, Smartphone, HelpCircle, X, Activity, Signal, RefreshCw } from "lucide-react";
 import { useCctvFeed } from "@/hooks/useCctvFeed";
 import { voiceAlert } from "@/lib/tts";
 import { getOrCreateSession } from "@/lib/session";
@@ -39,10 +39,27 @@ const EXAMPLES = [
   },
 ];
 
+function testConnection(url: string): Promise<{ ok: boolean; message: string }> {
+  return fetch(url, { method: "HEAD", mode: "no-cors", cache: "no-store" })
+    .then(() => ({ ok: true, message: "Camera reachable" }))
+    .catch((err) => ({ ok: false, message: `Cannot reach camera: ${err.message}` }));
+}
+
 function CctvSetup({ onStart }: { onStart: (url: string, mode: "hand" | "eye") => void }) {
   const [url, setUrl] = useState("");
   const [mode, setMode] = useState<"hand" | "eye">("hand");
   const [showHelp, setShowHelp] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+
+  const handleTest = async () => {
+    if (!url.trim()) return;
+    setTesting(true);
+    setTestResult(null);
+    const result = await testConnection(url.trim());
+    setTestResult(result);
+    setTesting(false);
+  };
 
   return (
     <div className="min-h-screen bg-[#f9f7f5] flex items-center justify-center p-4">
@@ -58,7 +75,6 @@ function CctvSetup({ onStart }: { onStart: (url: string, mode: "hand" | "eye") =
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="card p-6 space-y-5">
-          {/* Mode selector */}
           <div>
             <label className="text-xs font-semibold text-[#1f1f1f] uppercase tracking-widest mb-3 block">Detection Mode</label>
             <div className="grid grid-cols-2 gap-3">
@@ -87,7 +103,6 @@ function CctvSetup({ onStart }: { onStart: (url: string, mode: "hand" | "eye") =
             </div>
           </div>
 
-          {/* Camera URL input */}
           <div>
             <label className="text-xs font-semibold text-[#1f1f1f] uppercase tracking-widest mb-3 block">Camera Stream URL</label>
             <div className="relative">
@@ -108,19 +123,38 @@ function CctvSetup({ onStart }: { onStart: (url: string, mode: "hand" | "eye") =
             </p>
           </div>
 
-          {/* Start button */}
-          <button onClick={() => onStart(url, mode)} disabled={!url.trim()}
-            className={`w-full py-4 rounded-2xl font-semibold text-lg flex items-center justify-center gap-2.5 transition-all duration-200 ${
-              url.trim()
-                ? "bg-[#c63a22] text-white shadow-lg shadow-[#c63a22]/25 hover:shadow-xl hover:shadow-[#c63a22]/30 hover:translate-y-[-1px] active:translate-y-0"
-                : "bg-[#f5f3f0] text-[#6e6e6e] cursor-not-allowed"
-            }`}
-          >
-            <Play className="w-5 h-5" />
-            Start Monitoring
-          </button>
+          {testResult && (
+            <div className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
+              testResult.ok ? "bg-[#ecfdf5] border border-[#a7f3d0] text-[#22a67e]" : "bg-[#fef2f2] border border-[#fecaca] text-[#d94a4a]"
+            }`}>
+              <Signal className="w-4 h-4" />
+              {testResult.message}
+            </div>
+          )}
 
-          {/* Help toggle */}
+          <div className="flex gap-3">
+            <button onClick={handleTest} disabled={!url.trim() || testing}
+              className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all border ${
+                url.trim() && !testing
+                  ? "border-[#ececec] text-[#6e6e6e] hover:bg-[#f5f3f0]"
+                  : "border-[#f5f3f0] text-[#d5d5d5] cursor-not-allowed"
+              }`}
+            >
+              <RefreshCw className={`w-4 h-4 ${testing ? "animate-spin" : ""}`} />
+              Test
+            </button>
+            <button onClick={() => onStart(url, mode)} disabled={!url.trim()}
+              className={`flex-1 py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
+                url.trim()
+                  ? "bg-[#c63a22] text-white shadow-lg shadow-[#c63a22]/25 hover:shadow-xl hover:shadow-[#c63a22]/30 hover:translate-y-[-1px] active:translate-y-0"
+                  : "bg-[#f5f3f0] text-[#6e6e6e] cursor-not-allowed"
+              }`}
+            >
+              <Play className="w-4 h-4" />
+              Start Monitoring
+            </button>
+          </div>
+
           <div className="text-center">
             <button onClick={() => setShowHelp(!showHelp)} className="inline-flex items-center gap-1.5 text-xs text-[#6e6e6e] hover:text-[#c63a22] transition-colors">
               <HelpCircle className="w-3.5 h-3.5" />
@@ -129,7 +163,6 @@ function CctvSetup({ onStart }: { onStart: (url: string, mode: "hand" | "eye") =
           </div>
         </motion.div>
 
-        {/* Examples */}
         <AnimatePresence>
           {showHelp && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden mt-4">
@@ -156,7 +189,6 @@ function CctvSetup({ onStart }: { onStart: (url: string, mode: "hand" | "eye") =
           )}
         </AnimatePresence>
 
-        {/* Quick instructions */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="mt-8 card p-5">
           <h3 className="text-xs font-semibold text-[#1f1f1f] uppercase tracking-widest mb-3">Quick Start Guide</h3>
           <div className="space-y-2 text-sm text-[#6e6e6e]">
@@ -193,8 +225,8 @@ function CctvMonitor({ feedUrl, mode: initialMode }: { feedUrl: string; mode: "h
   }, [detectionMode]);
 
   const {
-    videoRef, canvasRef, gesture, confidence,
-    loading, error, feedReady, patientMetrics,
+    videoRef, imgRef, canvasRef, gesture, confidence,
+    loading, error, feedReady, streamType, patientMetrics, fps,
   } = useCctvFeed({
     feedUrl,
     mode: detectionMode,
@@ -227,9 +259,10 @@ function CctvMonitor({ feedUrl, mode: initialMode }: { feedUrl: string; mode: "h
 
   const gestureLabel = HAND_GESTURE_MAP[gesture || ""]?.description || EYE_GESTURE_MAP[gesture || ""]?.description || null;
 
+  const isMJPEG = streamType === "mjpeg";
+
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden">
-      {/* Top bar */}
       <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
         <div className="flex items-center gap-3 pointer-events-auto">
           <div className="flex items-center gap-2">
@@ -237,11 +270,17 @@ function CctvMonitor({ feedUrl, mode: initialMode }: { feedUrl: string; mode: "h
             <span className="text-sm font-semibold">CareSpeak CCTV</span>
           </div>
           <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/60 uppercase tracking-wider">
-            {detectionMode === "hand" ? "Hand Mode" : "Eye Mode"}
+            {detectionMode === "hand" ? "Hand" : "Eye"}
+          </span>
+          <span className={`text-xs px-2 py-0.5 rounded-full ${
+            isMJPEG ? "bg-[#22a67e]/20 text-[#22a67e]" : "bg-[#3b82f6]/20 text-[#3b82f6]"
+          }`}>
+            {isMJPEG ? "MJPEG" : "Video"}
           </span>
           {feedReady ? (
             <span className="flex items-center gap-1 text-xs text-[#22a67e]">
               <Wifi className="w-3 h-3" /> Live
+              {fps > 0 && <span className="text-white/40 ml-1">{fps} fps</span>}
             </span>
           ) : (
             <span className="flex items-center gap-1 text-xs text-[#e8993e]">
@@ -260,7 +299,6 @@ function CctvMonitor({ feedUrl, mode: initialMode }: { feedUrl: string; mode: "h
         </div>
       </div>
 
-      {/* Video feed */}
       <div className="fixed inset-0">
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-black z-30">
@@ -272,7 +310,7 @@ function CctvMonitor({ feedUrl, mode: initialMode }: { feedUrl: string; mode: "h
           </div>
         )}
 
-        {error && (
+        {error && !loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-black z-30">
             <div className="text-center max-w-md px-6">
               <div className="w-16 h-16 rounded-full bg-[#c63a22]/20 flex items-center justify-center mx-auto mb-4">
@@ -280,21 +318,36 @@ function CctvMonitor({ feedUrl, mode: initialMode }: { feedUrl: string; mode: "h
               </div>
               <p className="text-white font-medium mb-2">Stream Error</p>
               <p className="text-white/50 text-sm mb-4">{error}</p>
-              <p className="text-white/30 text-xs">URL: <span className="font-mono">{feedUrl}</span></p>
+              {streamType !== "unknown" && (
+                <p className="text-white/30 text-xs mb-4">
+                  Detected as <span className="font-semibold">{streamType.toUpperCase()}</span> stream
+                </p>
+              )}
+              <p className="text-white/30 text-xs mb-6">URL: <span className="font-mono">{feedUrl}</span></p>
             </div>
           </div>
         )}
 
-        <video
-          ref={videoRef}
-          className={`absolute inset-0 w-full h-full object-contain ${detectionMode === "hand" ? "scale-x-[-1]" : ""}`}
-          playsInline
-          muted
-        />
+        {!isMJPEG && (
+          <video
+            ref={videoRef}
+            className={`absolute inset-0 w-full h-full object-contain ${detectionMode === "hand" ? "scale-x-[-1]" : ""}`}
+            playsInline
+            muted
+          />
+        )}
+        {isMJPEG && (
+          <img
+            ref={imgRef}
+            src={feedUrl}
+            alt="CCTV feed"
+            className="absolute inset-0 w-full h-full object-contain"
+            crossOrigin="anonymous"
+          />
+        )}
         <canvas ref={canvasRef} className="absolute inset-0 w-full h-full object-contain" />
       </div>
 
-      {/* Gesture overlay */}
       {feedReady && gesture && confidence > 0.5 && (
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
@@ -320,7 +373,6 @@ function CctvMonitor({ feedUrl, mode: initialMode }: { feedUrl: string; mode: "h
         </motion.div>
       )}
 
-      {/* Bottom status bar */}
       <div className="fixed bottom-0 left-0 right-0 z-50 px-4 py-3 bg-gradient-to-t from-black/80 to-transparent">
         <div className="flex items-center justify-between text-xs text-white/50">
           <div className="flex items-center gap-3">
@@ -330,6 +382,12 @@ function CctvMonitor({ feedUrl, mode: initialMode }: { feedUrl: string; mode: "h
           <div className="flex items-center gap-3">
             {patientMetrics.movementActivity !== undefined && (
               <span>Motion: {Math.round((patientMetrics.movementActivity ?? 0) * 100)}%</span>
+            )}
+            {fps > 0 && (
+              <span className="flex items-center gap-1">
+                <Activity className="w-3 h-3" />
+                {fps} FPS
+              </span>
             )}
             <span className={`flex items-center gap-1 ${feedReady ? "text-[#22a67e]" : "text-[#e8993e]"}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${feedReady ? "bg-[#22a67e] animate-pulse" : "bg-[#e8993e]"}`} />
@@ -355,11 +413,20 @@ function CctvContent() {
     setStarted(true);
   };
 
+  const handleBack = () => {
+    router.replace("/cctv");
+    setStarted(false);
+  };
+
   if (!started) {
     return <CctvSetup onStart={handleStart} />;
   }
 
-  return <CctvMonitor feedUrl={qsFeed || ""} mode={qsMode} />;
+  return (
+    <div className="relative">
+      <CctvMonitor feedUrl={qsFeed || ""} mode={qsMode} />
+    </div>
+  );
 }
 
 export default function CctvPage() {

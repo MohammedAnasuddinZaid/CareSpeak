@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect } from "react";
 import { HandLandmarker, FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
-import { classifyHandGesture, HandGestureSmoother, isOpenPalm } from "@/lib/handClassifier";
+import { classifyHandGesture, HandGestureSmoother } from "@/lib/handClassifier";
 import { classifyEyeGesture, EyeGestureSmoother } from "@/lib/eyeClassifier";
 import { voiceAlert } from "@/lib/tts";
 import { addGestureLog } from "@/lib/gestureLog";
@@ -21,6 +21,7 @@ function dist(a: Point, b: Point): number {
 }
 
 type CctvMode = "hand" | "eye";
+type StreamType = "mjpeg" | "video" | "unknown";
 
 interface UseCctvFeedOptions {
   feedUrl: string;
@@ -30,9 +31,20 @@ interface UseCctvFeedOptions {
   onGesture?: (gesture: string, description: string, confidence: number) => void;
 }
 
+function detectStreamType(url: string): StreamType {
+  const path = url.toLowerCase();
+  if (path.includes(".m3u8")) return "video";
+  if (path.includes("/video") || path.includes("/mjpeg") || path.includes("/stream") || path.endsWith(".mjpeg")) {
+    return "mjpeg";
+  }
+  return "unknown";
+}
+
 export function useCctvFeed({ feedUrl, mode, sessionId, deviceId, onGesture }: UseCctvFeedOptions) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const landmarkerRef = useRef<HandLandmarker | FaceLandmarker | null>(null);
   const animRef = useRef<number>(0);
   const handSmootherRef = useRef(new HandGestureSmoother());
@@ -41,13 +53,18 @@ export function useCctvFeed({ feedUrl, mode, sessionId, deviceId, onGesture }: U
   const lastFpsTime = useRef(0);
   const frameCount = useRef(0);
   const streamAttempted = useRef(false);
+  const mjpegFetchAbort = useRef<AbortController | null>(null);
+  const streamTypeRef = useRef<StreamType>("unknown");
+  const processFramesRef = useRef<(() => void) | null>(null);
 
   const [gesture, setGesture] = useState<string | null>(null);
   const [confidence, setConfidence] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [feedReady, setFeedReady] = useState(false);
+  const [streamType, setStreamType] = useState<StreamType>("unknown");
   const [patientMetrics, setPatientMetrics] = useState<PatientMetrics>({});
+  const [fps, setFps] = useState(0);
 
   const metricsRef = useRef({
     prevLandmarks: null as Point[] | null,
@@ -95,58 +112,124 @@ export function useCctvFeed({ feedUrl, mode, sessionId, deviceId, onGesture }: U
     if (feedUrl) init();
     return () => {
       if (animRef.current) cancelAnimationFrame(animRef.current);
+      if (mjpegFetchAbort.current) mjpegFetchAbort.current.abort();
       if (videoRef.current) { videoRef.current.src = ""; }
+      if (imgRef.current) { imgRef.current.src = ""; }
     };
   }, [init, feedUrl]);
 
-  const startFeed = useCallback(() => {
-    if (!videoRef.current || streamAttempted.current) return;
-    streamAttempted.current = true;
-    const video = videoRef.current;
-    video.src = feedUrl;
-    video.crossOrigin = "anonymous";
-    video.muted = true;
-    video.playsInline = true;
-
-    const onMeta = () => {
-      video.play().then(() => {
-        setFeedReady(true);
-        processFrames();
-      }).catch(() => {
-        setError("Failed to play video stream. Check the URL.");
-      });
-    };
-
-    const onError = () => {
-      setError("Failed to load video feed. Check the URL and ensure the camera is accessible.");
-    };
-
-    video.addEventListener("loadedmetadata", onMeta, { once: true });
-    video.addEventListener("error", onError, { once: true });
-
-    setTimeout(() => {
-      if (!feedReady) {
-        video.removeEventListener("loadedmetadata", onMeta);
-        video.removeEventListener("error", onError);
-      }
-    }, 15000);
-  }, [feedUrl]);
-
-  const processFrames = useCallback(() => {
-    const video = videoRef.current;
+  function processFramesMJPEG() {
+    if (!imgRef.current || !canvasRef.current || !landmarkerRef.current) {
+      animRef.current = requestAnimationFrame(processFramesMJPEG);
+      return;
+    }
+    const img = imgRef.current;
     const canvas = canvasRef.current;
     const landmarker = landmarkerRef.current;
-    if (!video || !landmarker) return;
-    if (video.readyState < 2) { animRef.current = requestAnimationFrame(processFrames); return; }
+    const ctx = canvas.getContext("2d");
+    if (!ctx) { animRef.current = requestAnimationFrame(processFramesMJPEG); return; }
+
+    if (!img.complete || img.naturalWidth === 0) {
+      animRef.current = requestAnimationFrame(processFramesMJPEG);
+      return;
+    }
 
     frameCount.current++;
     const now = performance.now();
     if (now - lastFpsTime.current >= 1000) {
+      setFps(frameCount.current);
+      frameCount.current = 0;
+      lastFpsTime.current = now;
+    }
+
+    const w = img.naturalWidth || 640;
+    const h = img.naturalHeight || 480;
+    canvas.width = w;
+    canvas.height = h;
+
+    if (mode === "hand") {
+      ctx.save();
+      ctx.translate(w, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(img, 0, 0, w, h);
+      ctx.restore();
+    } else {
+      ctx.drawImage(img, 0, 0, w, h);
+    }
+
+    const landmarks: Point[][] = [];
+    let rawResult: any;
+
+    if (landmarker instanceof HandLandmarker) {
+      if (!offscreenCanvasRef.current) {
+        offscreenCanvasRef.current = document.createElement("canvas");
+      }
+      const oc = offscreenCanvasRef.current;
+      oc.width = w;
+      oc.height = h;
+      const octx = oc.getContext("2d");
+      if (!octx) { animRef.current = requestAnimationFrame(processFramesMJPEG); return; }
+      octx.drawImage(img, 0, 0, w, h);
+      const fakeVideo = document.createElement("video");
+      const perfNow = performance.now();
+      rawResult = landmarker.detectForVideo(oc as unknown as HTMLVideoElement, perfNow);
+      if (rawResult.landmarks) {
+        for (const lmArr of rawResult.landmarks) {
+          landmarks.push(lmArr.map((lm: any) => ({ x: lm.x, y: lm.y, z: lm.z ?? 0 })));
+        }
+      }
+    } else if (landmarker instanceof FaceLandmarker) {
+      if (!offscreenCanvasRef.current) {
+        offscreenCanvasRef.current = document.createElement("canvas");
+      }
+      const oc = offscreenCanvasRef.current;
+      oc.width = w;
+      oc.height = h;
+      const octx = oc.getContext("2d");
+      if (!octx) { animRef.current = requestAnimationFrame(processFramesMJPEG); return; }
+      octx.drawImage(img, 0, 0, w, h);
+      const perfNow = performance.now();
+      rawResult = landmarker.detectForVideo(oc as unknown as HTMLVideoElement, perfNow);
+      if (rawResult.faceLandmarks) {
+        for (const lmArr of rawResult.faceLandmarks) {
+          landmarks.push(lmArr.map((lm: any) => ({ x: lm.x, y: lm.y, z: lm.z ?? 0 })));
+        }
+      }
+    } else {
+      animRef.current = requestAnimationFrame(processFramesMJPEG);
+      return;
+    }
+
+    updateDetection(landmarks, rawResult, w, h, ctx);
+
+    animRef.current = requestAnimationFrame(processFramesMJPEG);
+  }
+
+  function processFramesVideo() {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const landmarker = landmarkerRef.current;
+    if (!video || !landmarker || !canvas) { animRef.current = requestAnimationFrame(processFramesVideo); return; }
+    if (video.readyState < 2) { animRef.current = requestAnimationFrame(processFramesVideo); return; }
+
+    frameCount.current++;
+    const now = performance.now();
+    if (now - lastFpsTime.current >= 1000) {
+      setFps(frameCount.current);
       frameCount.current = 0;
       lastFpsTime.current = now;
     }
 
     const perfNow = performance.now();
+    const w = video.videoWidth || 640;
+    const h = video.videoHeight || 480;
+    canvas.width = w;
+    canvas.height = h;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) { animRef.current = requestAnimationFrame(processFramesVideo); return; }
+    ctx.drawImage(video, 0, 0, w, h);
+
     const landmarks: Point[][] = [];
     let rawResult: any;
 
@@ -165,16 +248,24 @@ export function useCctvFeed({ feedUrl, mode, sessionId, deviceId, onGesture }: U
         }
       }
     } else {
+      animRef.current = requestAnimationFrame(processFramesVideo);
       return;
     }
 
+    updateDetection(landmarks, rawResult, w, h, ctx);
+
+    animRef.current = requestAnimationFrame(processFramesVideo);
+  }
+
+  function updateDetection(landmarks: Point[][], rawResult: any, w: number, h: number, ctx: CanvasRenderingContext2D) {
     const m = metricsRef.current;
     if (landmarks.length > 0 && m.prevLandmarks && landmarks[0].length > 0) {
       let total = 0;
-      for (let i = 0; i < landmarks[0].length; i++) {
+      const len = Math.min(landmarks[0].length, m.prevLandmarks.length);
+      for (let i = 0; i < len; i++) {
         total += dist(landmarks[0][i], m.prevLandmarks[i]);
       }
-      m.movementAccum += total / landmarks[0].length;
+      m.movementAccum += total / len;
       m.movementSamples++;
     }
     m.prevLandmarks = landmarks.length > 0 ? landmarks[0].map((p) => ({ ...p })) : null;
@@ -227,68 +318,129 @@ export function useCctvFeed({ feedUrl, mode, sessionId, deviceId, onGesture }: U
       }
     }
 
-    if (canvas && video) {
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        const w = video.videoWidth || 640;
-        const h = video.videoHeight || 480;
-        canvas.width = w;
-        canvas.height = h;
-        ctx.drawImage(video, 0, 0, w, h);
-
-        if (mode === "hand" && rawResult.landmarks) {
-          for (let hi = 0; hi < rawResult.landmarks.length; hi++) {
-            const lmArr = rawResult.landmarks[hi];
-            ctx.strokeStyle = "rgba(59,130,246,0.6)";
-            ctx.lineWidth = 2;
-            for (const [i, j] of HAND_CONNECTIONS) {
-              ctx.beginPath();
-              ctx.moveTo(lmArr[i].x * w, lmArr[i].y * h);
-              ctx.lineTo(lmArr[j].x * w, lmArr[j].y * h);
-              ctx.stroke();
-            }
-            for (let fi = 0; fi < FINGER_INDICES.length; fi++) {
-              for (const idx of FINGER_INDICES[fi]) {
-                const lm = lmArr[idx];
-                ctx.beginPath();
-                ctx.arc(lm.x * w, lm.y * h, 4, 0, 2 * Math.PI);
-                ctx.fillStyle = FINGER_COLORS[fi % FINGER_COLORS.length];
-                ctx.globalAlpha = Math.max(0.3, Math.min(1, confidence));
-                ctx.fill();
-                ctx.globalAlpha = 1;
-              }
-            }
-          }
+    if (mode === "hand" && rawResult?.landmarks) {
+      for (let hi = 0; hi < rawResult.landmarks.length; hi++) {
+        const lmArr = rawResult.landmarks[hi];
+        ctx.strokeStyle = "rgba(59,130,246,0.6)";
+        ctx.lineWidth = 2;
+        for (const [i, j] of HAND_CONNECTIONS) {
+          ctx.beginPath();
+          ctx.moveTo(lmArr[i].x * w, lmArr[i].y * h);
+          ctx.lineTo(lmArr[j].x * w, lmArr[j].y * h);
+          ctx.stroke();
         }
-
-        if (mode === "eye" && rawResult.faceLandmarks) {
-          const faceLms = rawResult.faceLandmarks[0];
-          if (faceLms) {
-            ctx.strokeStyle = "rgba(34, 166, 126, 0.5)";
-            ctx.lineWidth = 1;
-            const faceConnections: [number, number][] = [
-              [33, 133], [362, 263], [61, 291], [0, 17], [17, 78], [78, 292], [292, 306], [306, 405], [405, 321], [321, 375],
-              [164, 389], [155, 387], [66, 296], [159, 145], [386, 374],
-            ];
-            for (const [i, j] of faceConnections) {
-              ctx.beginPath();
-              ctx.moveTo(faceLms[i].x * w, faceLms[i].y * h);
-              ctx.lineTo(faceLms[j].x * w, faceLms[j].y * h);
-              ctx.stroke();
-            }
+        for (let fi = 0; fi < FINGER_INDICES.length; fi++) {
+          for (const idx of FINGER_INDICES[fi]) {
+            const lm = lmArr[idx];
+            ctx.beginPath();
+            ctx.arc(lm.x * w, lm.y * h, 4, 0, 2 * Math.PI);
+            ctx.fillStyle = FINGER_COLORS[fi % FINGER_COLORS.length];
+            ctx.globalAlpha = Math.max(0.3, Math.min(1, confidence));
+            ctx.fill();
+            ctx.globalAlpha = 1;
           }
         }
       }
     }
 
-    animRef.current = requestAnimationFrame(processFrames);
-  }, [mode, confidence, sessionId, onGesture]);
+    if (mode === "eye" && rawResult?.faceLandmarks) {
+      const faceLms = rawResult.faceLandmarks[0];
+      if (faceLms) {
+        ctx.strokeStyle = "rgba(34, 166, 126, 0.5)";
+        ctx.lineWidth = 1;
+        const faceConnections: [number, number][] = [
+          [33, 133], [362, 263], [61, 291], [0, 17], [17, 78], [78, 292], [292, 306], [306, 405], [405, 321], [321, 375],
+          [164, 389], [155, 387], [66, 296], [159, 145], [386, 374],
+        ];
+        for (const [i, j] of faceConnections) {
+          ctx.beginPath();
+          ctx.moveTo(faceLms[i].x * w, faceLms[i].y * h);
+          ctx.lineTo(faceLms[j].x * w, faceLms[j].y * h);
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  const startMJPEGStream = useCallback(() => {
+    if (mjpegFetchAbort.current) mjpegFetchAbort.current.abort();
+    const abort = new AbortController();
+    mjpegFetchAbort.current = abort;
+
+    setFeedReady(true);
+    processFramesMJPEG();
+
+    const doFetch = async () => {
+      while (!abort.signal.aborted) {
+        try {
+          const res = await fetch(feedUrl, {
+            signal: abort.signal,
+            cache: "no-store",
+            mode: "cors",
+          });
+          if (!res.ok) {
+            setError(`Camera responded with status ${res.status}. Make sure the camera is reachable.`);
+            break;
+          }
+        } catch (err: any) {
+          if (err?.name === "AbortError") break;
+          setError(`Cannot connect to camera. ${err?.message || "Check the URL and network connection."}`);
+          break;
+        }
+      }
+    };
+    doFetch();
+  }, [feedUrl]);
+
+  const startVideoStream = useCallback(() => {
+    if (!videoRef.current || streamAttempted.current) return;
+    streamAttempted.current = true;
+    const video = videoRef.current;
+    video.src = feedUrl;
+    video.crossOrigin = "anonymous";
+    video.muted = true;
+    video.playsInline = true;
+
+    const onMeta = () => {
+      video.play().then(() => {
+        setFeedReady(true);
+        processFramesVideo();
+      }).catch(() => {
+        setError("Failed to play video stream. The URL may not be a valid video stream.");
+      });
+    };
+
+    const onError = () => {
+      setError("Failed to load video feed. The stream may be incompatible or blocked by CORS.");
+    };
+
+    video.addEventListener("loadedmetadata", onMeta, { once: true });
+    video.addEventListener("error", onError, { once: true });
+
+    const fallbackTimer = setTimeout(() => {
+      if (!feedReady) {
+        video.removeEventListener("loadedmetadata", onMeta);
+        video.removeEventListener("error", onError);
+        if (!streamAttempted.current) return;
+        setError(`Could not load stream after 15s. Is "${feedUrl}" a valid video URL?`);
+      }
+    }, 15000);
+  }, [feedUrl]);
 
   useEffect(() => {
-    if (!loading && landmarkerRef.current && !feedReady && feedUrl) {
-      startFeed();
+    if (loading || !landmarkerRef.current || feedReady || !feedUrl) return;
+    const detected = detectStreamType(feedUrl);
+    streamTypeRef.current = detected;
+    setStreamType(detected);
+    if (detected === "mjpeg") {
+      startMJPEGStream();
+    } else {
+      startVideoStream();
     }
-  }, [loading, feedReady, startFeed, feedUrl]);
+  }, [loading, feedReady, startMJPEGStream, startVideoStream, feedUrl]);
 
-  return { videoRef, canvasRef, gesture, confidence, loading, error, feedReady, patientMetrics };
+  return {
+    videoRef, imgRef, canvasRef, gesture, confidence,
+    loading, error, feedReady, streamType, patientMetrics, fps,
+  };
 }

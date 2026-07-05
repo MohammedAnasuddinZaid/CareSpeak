@@ -103,3 +103,66 @@ export function getLatestGesture(): GestureLogEntry | null {
   const log = loadGestureLog();
   return log.length > 0 ? log[0] : null;
 }
+
+export function getDailyGestureCounts(days: number): { date: string; count: number; gesture: string }[] {
+  const log = loadGestureLog();
+  const cutoff = Date.now() - days * 86400000;
+  const filtered = log.filter((e) => e.timestamp >= cutoff);
+  const map = new Map<string, { date: string; count: number; gesture: string }>();
+  for (const entry of filtered) {
+    const d = new Date(entry.timestamp);
+    const dateStr = d.toISOString().slice(0, 10);
+    const key = `${dateStr}_${entry.gesture}`;
+    if (map.has(key)) {
+      map.get(key)!.count++;
+    } else {
+      map.set(key, { date: dateStr, count: 1, gesture: entry.gesture });
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export function getHourlyDistribution(): { hour: number; count: number }[] {
+  const log = loadGestureLog();
+  const hours = new Array(24).fill(0);
+  for (const entry of log) {
+    const h = new Date(entry.timestamp).getHours();
+    hours[h]++;
+  }
+  return hours.map((count, hour) => ({ hour, count }));
+}
+
+export function getGestureDistribution(): { name: string; value: number; color: string }[] {
+  const log = loadGestureLog();
+  const counts: Record<string, number> = {};
+  for (const entry of log) {
+    counts[entry.gesture] = (counts[entry.gesture] ?? 0) + 1;
+  }
+  const COLORS: Record<string, string> = {
+    YES: "#22a67e",
+    NO: "#d94a4a",
+    HELP: "#e8993e",
+    WATER: "#3b82f6",
+    EMERGENCY: "#dc2626",
+    HELLO: "#8b5cf6",
+  };
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, value]) => ({ name, value, color: COLORS[name] ?? "#6e6e6e" }));
+}
+
+export function getTrends(): { total: number; today: number; change: number; direction: "up" | "down" | "flat" } {
+  const log = loadGestureLog();
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const yesterdayStart = todayStart - 86400000;
+  const today = log.filter((e) => e.timestamp >= todayStart).length;
+  const yesterday = log.filter((e) => e.timestamp >= yesterdayStart && e.timestamp < todayStart).length;
+  let change = 0;
+  let direction: "up" | "down" | "flat" = "flat";
+  if (yesterday > 0) {
+    change = Math.round(((today - yesterday) / yesterday) * 100);
+    direction = change > 5 ? "up" : change < -5 ? "down" : "flat";
+  }
+  return { total: log.length, today, change, direction };
+}
